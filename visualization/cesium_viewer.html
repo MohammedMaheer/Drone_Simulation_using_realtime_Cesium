@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drone Sim — Cesium 3D Globe</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.107/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.107/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+  html, body, #cesiumContainer {
+    width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
+  #hud {
+    position: absolute; top: 12px; left: 12px; z-index: 100;
+    color: #00ff66; background: rgba(8,8,18,0.82);
+    padding: 12px 16px; border-radius: 8px;
+    font-size: 12px; line-height: 1.55;
+    pointer-events: none; min-width: 220px;
+    border: 1px solid rgba(0,255,100,0.15);
+    box-shadow: 0 0 20px rgba(0,255,80,0.08);
+  }
+  #hud .title { color: #0af; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+  #hud .dim { color: #5a6a7a; }
+  #hud .warn { color: #ffaa00; }
+  #hud .crit { color: #ff3333; }
+  #status {
+    position: absolute; bottom: 12px; left: 12px; z-index: 100;
+    color: #ccc; background: rgba(0,0,0,0.6);
+    padding: 6px 14px; border-radius: 4px; font-size: 11px;
+    font-family: sans-serif;
+  }
+  #controls-help {
+    position: absolute; bottom: 12px; right: 12px; z-index: 100;
+    color: #8899aa; background: rgba(8,8,18,0.75);
+    padding: 8px 12px; border-radius: 6px; font-size: 10px;
+    line-height: 1.5; pointer-events: none;
+  }
+  #tiles-info {
+    position: absolute; top: 12px; right: 12px; z-index: 100;
+    color: #aaa; background: rgba(0,0,0,0.5);
+    padding: 4px 10px; border-radius: 4px; font-size: 10px;
+    font-family: sans-serif;
+  }
+</style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+
+<div id="hud">
+  <div class="title">CESIUM 3D VIEW</div>
+  <div id="hud-content">Waiting for MATLAB...</div>
+</div>
+
+<div id="status">Connecting to MATLAB...</div>
+<div id="tiles-info">Loading tiles...</div>
+
+<div id="controls-help">
+  F — Toggle camera follow<br>
+  1/2/3 — Camera: Close / Medium / Far<br>
+  Mouse — Orbit (when free cam)
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  // ── Configuration ───────────────────────────────────────────
+  const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzOTY1NWJjOS0yMzFkLTQwZGYtYjUwMy03MWU0ZDZjOTkyNWYiLCJpZCI6NDE3MjMxLCJpYXQiOjE3NzYwMjM1NjV9.0EKX-kZQ0sNIKObR9BLjfse7HKfVBHGx4v2pT55VRjg';
+  const POLL_MS       = 50;        // 20 Hz state poll
+  const TRAIL_MAX     = 800;       // Max trail points
+  const CAM_RANGES    = [40, 120, 350]; // Close, Medium, Far
+
+  // ── State ───────────────────────────────────────────────────
+  let lastState      = null;
+  let cameraFollow   = true;
+  let camRangeIdx    = 0;         // index into CAM_RANGES
+  let trailPositions = [];
+  let firstFix       = true;
+  let pollErrors     = 0;
+
+  // ── Cesium Init ─────────────────────────────────────────────
+  Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
+
+  const viewer = new Cesium.Viewer('cesiumContainer', {
+    terrain: Cesium.Terrain.fromWorldTerrain(),
+    animation:            false,
+    timeline:             false,
+    geocoder:             false,
+    homeButton:           false,
+    sceneModePicker:      false,
+    baseLayerPicker:      false,
+    navigationHelpButton: false,
+    fullscreenButton:     false,
+    infoBox:              false,
+    selectionIndicator:   false,
+    skyBox:               true,
+    skyAtmosphere:        true,
+    shouldAnimate:        true,
+  });
+
+  // Improve visual quality (guarded for version compat)
+  try { viewer.scene.globe.enableLighting = true; } catch(e) {}
+  viewer.scene.fog.enabled = true;
+  try { viewer.scene.highDynamicRange = true; } catch(e) {}
+  if (Cesium.FeatureDetection.supportsImageRenderingPixelated()) {
+    viewer.resolutionScale = window.devicePixelRatio || 1.0;
+  }
+
+  // ── Load 3D Tiles ──────────────────────────────────────────
+  const tilesInfo = document.getElementById('tiles-info');
+
+  (async function loadTiles() {
+    // Try Google Photorealistic 3D Tiles first (Cesium Ion asset 2275207)
+    try {
+      const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
+      viewer.scene.primitives.add(tileset);
+      tilesInfo.textContent = 'Google Photorealistic 3D Tiles';
+      return;
+    } catch (e) {
+      console.log('Google 3D Tiles not available, trying OSM Buildings...', e.message);
+    }
+
+    // Fallback: Cesium OSM Buildings (asset 96188)
+    try {
+      const buildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
+      viewer.scene.primitives.add(buildings);
+      tilesInfo.textContent = 'Cesium OSM Buildings';
+    } catch (e2) {
+      console.warn('No 3D buildings available:', e2.message);
+      tilesInfo.textContent = 'Terrain only (no 3D buildings)';
+    }
+  })();
+
+  // ── Drone Entity ───────────────────────────────────────────
+  const droneEntity = viewer.entities.add({
+    name: 'Drone',
+    position: Cesium.Cartesian3.fromDegrees(-73.985, 40.749, 50),
+    point: {
+      pixelSize: 14,
+      color: Cesium.Color.CYAN,
+      outlineColor: Cesium.Color.WHITE,
+      outlineWidth: 2,
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      scaleByDistance: new Cesium.NearFarScalar(20, 1.5, 1500, 0.5),
+    },
+    label: {
+      text: 'DRONE',
+      font: 'bold 13px Consolas',
+      fillColor: Cesium.Color.CYAN,
+      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+      outlineWidth: 2,
+      outlineColor: Cesium.Color.BLACK,
+      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+      pixelOffset: new Cesium.Cartesian2(0, -22),
+      disableDepthTestDistance: Number.POSITIVE_INFINITY,
+      scaleByDistance: new Cesium.NearFarScalar(20, 1.0, 800, 0.4),
+    },
+  });
+
+  // Altitude line (vertical dashed line from drone to ground)
+  const altLineEntity = viewer.entities.add({
+    name: 'AltLine',
+    polyline: {
+      positions: new Cesium.CallbackProperty(function() {
+        if (!lastState) return [];
+        const ground = Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, 0);
+        const air    = Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, lastState.alt);
+        return [ground, air];
+      }, false),
+      width: 1,
+      material: new Cesium.PolylineDashMaterialProperty({
+        color: Cesium.Color.CYAN.withAlpha(0.35),
+        dashLength: 8,
+      }),
+    },
+  });
+
+  // Flight trail polyline
+  const trailEntity = viewer.entities.add({
+    name: 'Trail',
+    polyline: {
+      positions: new Cesium.CallbackProperty(function() { return trailPositions; }, false),
+      width: 2.5,
+      material: new Cesium.PolylineGlowMaterialProperty({
+        glowPower: 0.15,
+        color: Cesium.Color.CYAN.withAlpha(0.7),
+      }),
+    },
+  });
+
+  // Ground shadow circle
+  const shadowEntity = viewer.entities.add({
+    name: 'Shadow',
+    position: new Cesium.CallbackProperty(function() {
+      if (!lastState) return Cesium.Cartesian3.ZERO;
+      return Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, 0);
+    }, false),
+    ellipse: {
+      semiMajorAxis: 2.0,
+      semiMinorAxis: 2.0,
+      material: Cesium.Color.BLACK.withAlpha(0.25),
+      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+    },
+  });
+
+  // ── HUD Update ─────────────────────────────────────────────
+  const hudContent = document.getElementById('hud-content');
+  const statusEl   = document.getElementById('status');
+
+  function updateHUD(s) {
+    let battClass = '';
+    const battPct = (s.soc * 100).toFixed(0);
+    if (s.soc < 0.15) battClass = 'crit';
+    else if (s.soc < 0.30) battClass = 'warn';
+
+    hudContent.innerHTML =
+      `<span class="dim">MODE</span>  ${s.mode.toUpperCase()}<br>` +
+      `<span class="dim">TIME</span>  ${s.time.toFixed(1)}s<br><br>` +
+      `<span class="dim">LAT </span>  ${s.lat.toFixed(6)}<br>` +
+      `<span class="dim">LON </span>  ${s.lon.toFixed(6)}<br>` +
+      `<span class="dim">ALT </span>  ${s.alt.toFixed(1)} m<br><br>` +
+      `<span class="dim">SPD </span>  ${s.speed.toFixed(1)} m/s<br>` +
+      `<span class="dim">V/S </span>  ${s.vz >= 0 ? '+' : ''}${s.vz.toFixed(1)} m/s<br><br>` +
+      `<span class="dim">ROLL</span>  ${s.roll.toFixed(1)}°<br>` +
+      `<span class="dim">PTCH</span>  ${s.pitch.toFixed(1)}°<br>` +
+      `<span class="dim">YAW </span>  ${s.yaw.toFixed(1)}°<br><br>` +
+      `<span class="dim">BAT </span>  <span class="${battClass}">${battPct}%</span><br>` +
+      `<span class="dim">LOC </span>  ${s.location || '—'}`;
+  }
+
+  // ── Camera ─────────────────────────────────────────────────
+  function updateCamera(s) {
+    if (!cameraFollow || !s) return;
+
+    const pos     = Cesium.Cartesian3.fromDegrees(s.lon, s.lat, s.alt);
+    const heading = Cesium.Math.toRadians(s.yaw || 0);
+    const range   = CAM_RANGES[camRangeIdx];
+    const pitch   = Cesium.Math.toRadians(-22);
+
+    viewer.camera.lookAt(pos, new Cesium.HeadingPitchRange(
+      heading + Math.PI,  // Look from behind
+      pitch,
+      range
+    ));
+  }
+
+  // ── Keyboard ───────────────────────────────────────────────
+  document.addEventListener('keydown', function(e) {
+    switch (e.key.toLowerCase()) {
+      case 'f':
+        cameraFollow = !cameraFollow;
+        if (!cameraFollow) {
+          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
+        }
+        statusEl.textContent = cameraFollow ? 'Camera: FOLLOW' : 'Camera: FREE';
+        break;
+      case '1': camRangeIdx = 0; statusEl.textContent = 'Camera: CLOSE'; break;
+      case '2': camRangeIdx = 1; statusEl.textContent = 'Camera: MEDIUM'; break;
+      case '3': camRangeIdx = 2; statusEl.textContent = 'Camera: FAR';    break;
+    }
+  });
+
+  // ── State Polling ──────────────────────────────────────────
+  async function pollState() {
+    try {
+      const resp = await fetch('/state', { cache: 'no-store' });
+      if (!resp.ok) throw new Error(resp.status);
+
+      const state = await resp.json();
+      if (state.lat === undefined) {
+        setTimeout(pollState, POLL_MS);
+        return;
+      }
+
+      pollErrors = 0;
+      lastState = state;
+
+      // Update drone position + orientation
+      const pos = Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
+      droneEntity.position = pos;
+
+      const hpr = new Cesium.HeadingPitchRoll(
+        Cesium.Math.toRadians(state.yaw  || 0),
+        Cesium.Math.toRadians(state.pitch || 0),
+        Cesium.Math.toRadians(state.roll  || 0)
+      );
+      droneEntity.orientation = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
+
+      // Label — altitude + speed
+      droneEntity.label.text = `ALT ${state.alt.toFixed(1)}m  ${state.speed.toFixed(1)}m/s`;
+
+      // Trail
+      trailPositions.push(Cesium.Cartesian3.clone(pos));
+      if (trailPositions.length > TRAIL_MAX) trailPositions.shift();
+
+      // Shadow size scales with altitude
+      const shadowR = Math.max(1.5, Math.min(8, state.alt * 0.12));
+      shadowEntity.ellipse.semiMajorAxis = shadowR;
+      shadowEntity.ellipse.semiMinorAxis = shadowR;
+
+      // HUD + Status
+      updateHUD(state);
+      statusEl.textContent =
+        `Connected — ${state.time.toFixed(1)}s | ` +
+        `Camera: ${cameraFollow ? 'FOLLOW' : 'FREE'} (${['CLOSE','MED','FAR'][camRangeIdx]})`;
+
+      // First fix: fly to drone
+      if (firstFix) {
+        firstFix = false;
+        viewer.camera.flyTo({
+          destination: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt + 200),
+          orientation: {
+            heading: Cesium.Math.toRadians(state.yaw || 0) + Math.PI,
+            pitch: Cesium.Math.toRadians(-30),
+            roll: 0,
+          },
+          duration: 2.0,
+          complete: function() { cameraFollow = true; },
+        });
+      }
+
+      updateCamera(state);
+
+    } catch (e) {
+      pollErrors++;
+      if (pollErrors > 40) {
+        statusEl.textContent = 'MATLAB disconnected. Restart sim with V key.';
+        hudContent.innerHTML = '<span class="dim">Connection lost</span>';
+      } else {
+        statusEl.textContent = 'Waiting for MATLAB...';
+      }
+    }
+
+    setTimeout(pollState, POLL_MS);
+  }
+
+  // Start polling
+  pollState();
+
+})();
+</script>
+</body>
+</html>

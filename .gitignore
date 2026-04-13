@@ -1,0 +1,8 @@
+*.lnk
+*.asv
+*.mat
+*.png
+*.slx
+*.slxc
+slprj/
+.qodo/

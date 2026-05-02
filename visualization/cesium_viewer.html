@@ -1,343 +1,288 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Drone Sim — Cesium 3D Globe</title>
-<script src="https://cesium.com/downloads/cesiumjs/releases/1.107/Build/Cesium/Cesium.js"></script>
-<link href="https://cesium.com/downloads/cesiumjs/releases/1.107/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<title>Drone Sim - Cesium 3D Globe</title>
+<script src="cesium/Cesium.js"></script>
+<link href="cesium/widgets.css" rel="stylesheet">
 <style>
-  html, body, #cesiumContainer {
-    width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden;
-    font-family: 'Consolas', 'Courier New', monospace;
-  }
-  #hud {
-    position: absolute; top: 12px; left: 12px; z-index: 100;
-    color: #00ff66; background: rgba(8,8,18,0.82);
-    padding: 12px 16px; border-radius: 8px;
-    font-size: 12px; line-height: 1.55;
-    pointer-events: none; min-width: 220px;
-    border: 1px solid rgba(0,255,100,0.15);
-    box-shadow: 0 0 20px rgba(0,255,80,0.08);
-  }
-  #hud .title { color: #0af; font-size: 14px; font-weight: bold; margin-bottom: 6px; }
-  #hud .dim { color: #5a6a7a; }
-  #hud .warn { color: #ffaa00; }
-  #hud .crit { color: #ff3333; }
-  #status {
-    position: absolute; bottom: 12px; left: 12px; z-index: 100;
-    color: #ccc; background: rgba(0,0,0,0.6);
-    padding: 6px 14px; border-radius: 4px; font-size: 11px;
-    font-family: sans-serif;
-  }
-  #controls-help {
-    position: absolute; bottom: 12px; right: 12px; z-index: 100;
-    color: #8899aa; background: rgba(8,8,18,0.75);
-    padding: 8px 12px; border-radius: 6px; font-size: 10px;
-    line-height: 1.5; pointer-events: none;
-  }
-  #tiles-info {
-    position: absolute; top: 12px; right: 12px; z-index: 100;
-    color: #aaa; background: rgba(0,0,0,0.5);
-    padding: 4px 10px; border-radius: 4px; font-size: 10px;
-    font-family: sans-serif;
-  }
+html,body,#cv{width:100%;height:100%;margin:0;padding:0;overflow:hidden;font-family:'Consolas',monospace}
+#hud{position:absolute;top:12px;left:12px;z-index:100;color:#00ff66;background:rgba(8,8,18,0.82);
+ padding:12px 16px;border-radius:8px;font-size:12px;line-height:1.55;pointer-events:none;
+ min-width:220px;border:1px solid rgba(0,255,100,0.15)}
+#hud .title{color:#0af;font-size:14px;font-weight:bold;margin-bottom:6px}
+#hud .dim{color:#5a6a7a}#hud .warn{color:#ffaa00}#hud .crit{color:#ff3333}
+#stat{position:absolute;bottom:12px;left:12px;z-index:100;color:#ccc;background:rgba(0,0,0,0.6);
+ padding:6px 14px;border-radius:4px;font-size:11px;font-family:sans-serif}
+#ctrl{position:absolute;bottom:12px;right:12px;z-index:100;color:#8899aa;background:rgba(8,8,18,0.75);
+ padding:8px 12px;border-radius:6px;font-size:10px;line-height:1.5;pointer-events:none}
+#info{position:absolute;top:12px;right:12px;z-index:100;color:#aaa;background:rgba(0,0,0,0.5);
+ padding:4px 10px;border-radius:4px;font-size:10px;font-family:sans-serif}
 </style>
 </head>
 <body>
-<div id="cesiumContainer"></div>
-
-<div id="hud">
-  <div class="title">CESIUM 3D VIEW</div>
-  <div id="hud-content">Waiting for MATLAB...</div>
-</div>
-
-<div id="status">Connecting to MATLAB...</div>
-<div id="tiles-info">Loading tiles...</div>
-
-<div id="controls-help">
-  F — Toggle camera follow<br>
-  1/2/3 — Camera: Close / Medium / Far<br>
-  Mouse — Orbit (when free cam)
-</div>
-
+<div id="cv"></div>
+<div id="hud"><div class="title">CESIUM 3D VIEW</div><div id="hc">Waiting for MATLAB...</div></div>
+<div id="stat">Connecting to MATLAB...</div>
+<div id="info">Loading tiles...</div>
+<div id="ctrl"><b>Camera:</b> 1-Chase 2-Orbit 3-Top 4-FPV 5-Free | +/- Zoom</div>
 <script>
-(function() {
-  'use strict';
+(function(){'use strict';
+/* ---------- constants ---------- */
+var TK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzOTY1NWJjOS0yMzFkLTQwZGYtYjUwMy03MWU0ZDZjOTkyNWYiLCJpZCI6NDE3MjMxLCJpYXQiOjE3NzYwMjM1NjV9.0EKX-kZQ0sNIKObR9BLjfse7HKfVBHGx4v2pT55VRjg';
+var PMS=50,TMAX=800,ARM=5;
+var CM={CH:0,OR:1,TD:2,FP:3,FR:4},CN=['CHASE','ORBIT','TOP-DOWN','FPV','FREE'];
+var cam={mode:CM.CH,dist:35,oAngle:0},sP=null,sD=null,sU=null;
+var prev=null,curr=null,pollT=0,pe=0,ff=true,trail=[];
+var C3=Cesium.Cartesian3,M4=Cesium.Matrix4,M3=Cesium.Matrix3;
+var VF=Cesium.PerInstanceColorAppearance.VERTEX_FORMAT;
+var CC=function(c){return Cesium.ColorGeometryInstanceAttribute.fromColor(c)};
+var Cd=Cesium.Color;
 
-  // ── Configuration ───────────────────────────────────────────
-  const CESIUM_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIzOTY1NWJjOS0yMzFkLTQwZGYtYjUwMy03MWU0ZDZjOTkyNWYiLCJpZCI6NDE3MjMxLCJpYXQiOjE3NzYwMjM1NjV9.0EKX-kZQ0sNIKObR9BLjfse7HKfVBHGx4v2pT55VRjg';
-  const POLL_MS       = 50;        // 20 Hz state poll
-  const TRAIL_MAX     = 800;       // Max trail points
-  const CAM_RANGES    = [40, 120, 350]; // Close, Medium, Far
+/* ---------- viewer ---------- */
+Cesium.Ion.defaultAccessToken=TK;
+var V=new Cesium.Viewer('cv',{terrain:Cesium.Terrain.fromWorldTerrain(),
+  animation:false,timeline:false,geocoder:false,homeButton:false,
+  sceneModePicker:false,baseLayerPicker:false,navigationHelpButton:false,
+  fullscreenButton:false,infoBox:false,selectionIndicator:false,
+  skyBox:false,skyAtmosphere:false,shouldAnimate:true});
+try{V.scene.globe.enableLighting=true}catch(x){}
+V.scene.fog.enabled=true;
+try{V.scene.highDynamicRange=true}catch(x){}
+var inf=document.getElementById('info');
+(async function(){
+  try{var t=await Cesium.Cesium3DTileset.fromIonAssetId(2275207);V.scene.primitives.add(t);inf.textContent='Google 3D Tiles';return}catch(x){}
+  try{var b=await Cesium.Cesium3DTileset.fromIonAssetId(96188);V.scene.primitives.add(b);inf.textContent='OSM Buildings'}catch(x){inf.textContent='Terrain only'}
+})();
 
-  // ── State ───────────────────────────────────────────────────
-  let lastState      = null;
-  let cameraFollow   = true;
-  let camRangeIdx    = 0;         // index into CAM_RANGES
-  let trailPositions = [];
-  let firstFix       = true;
-  let pollErrors     = 0;
+/* ---------- 3D drone geometry (Cesium Primitives) ---------- */
+function mkBox(w,d,h,x,y,z,col){
+  return new Cesium.GeometryInstance({geometry:Cesium.BoxGeometry.fromDimensions(
+    {dimensions:new C3(w,d,h),vertexFormat:VF}),
+    modelMatrix:M4.fromTranslation(new C3(x,y,z)),attributes:{color:CC(col)}});}
+function mkCyl(r,len,x,y,z,col){
+  return new Cesium.GeometryInstance({geometry:new Cesium.CylinderGeometry(
+    {topRadius:r,bottomRadius:r,length:len,slices:20,vertexFormat:VF}),
+    modelMatrix:M4.fromTranslation(new C3(x,y,z)),attributes:{color:CC(col)}});}
+function mkArm(ang,len,w,h,col){
+  var R=M3.fromRotationZ(-ang);
+  var cx=Math.sin(ang)*len/2,cy=Math.cos(ang)*len/2;
+  return new Cesium.GeometryInstance({geometry:Cesium.BoxGeometry.fromDimensions(
+    {dimensions:new C3(w,len,h),vertexFormat:VF}),
+    modelMatrix:M4.fromRotationTranslation(R,new C3(cx,cy,0)),attributes:{color:CC(col)}});}
 
-  // ── Cesium Init ─────────────────────────────────────────────
-  Cesium.Ion.defaultAccessToken = CESIUM_TOKEN;
-
-  const viewer = new Cesium.Viewer('cesiumContainer', {
-    terrain: Cesium.Terrain.fromWorldTerrain(),
-    animation:            false,
-    timeline:             false,
-    geocoder:             false,
-    homeButton:           false,
-    sceneModePicker:      false,
-    baseLayerPicker:      false,
-    navigationHelpButton: false,
-    fullscreenButton:     false,
-    infoBox:              false,
-    selectionIndicator:   false,
-    skyBox:               true,
-    skyAtmosphere:        true,
-    shouldAnimate:        true,
-  });
-
-  // Improve visual quality (guarded for version compat)
-  try { viewer.scene.globe.enableLighting = true; } catch(e) {}
-  viewer.scene.fog.enabled = true;
-  try { viewer.scene.highDynamicRange = true; } catch(e) {}
-  if (Cesium.FeatureDetection.supportsImageRenderingPixelated()) {
-    viewer.resolutionScale = window.devicePixelRatio || 1.0;
+function buildDrone(){
+  var gi=[],bw=ARM*0.36,bd=ARM*0.28,bh=ARM*0.11;
+  var mR=ARM*0.075,mH=ARM*0.055,rR=ARM*0.32,rH=ARM*0.008;
+  var aw=ARM*0.03,ah=ARM*0.022;
+  var gDrop=ARM*0.18,gW=ARM*0.016,sL=ARM*0.5,sW=ARM*0.013;
+  var aa=[Math.PI/4,3*Math.PI/4,5*Math.PI/4,7*Math.PI/4];
+  var darkBody=Cd.fromCssColorString('#2a2a3e');
+  var darkTop=Cd.fromCssColorString('#1a1a2e');
+  var silver=Cd.fromCssColorString('#555566');
+  var gear=Cd.fromCssColorString('#333344');
+  /* body + top + battery */
+  gi.push(mkBox(bw,bd,bh, 0,0,0, darkBody));
+  gi.push(mkBox(bw*1.08,bd*1.08,bh*0.22, 0,0,bh*0.6, darkTop));
+  gi.push(mkBox(bw*0.55,bd*0.38,bh*0.45, 0,0,-bh*0.48, Cd.fromCssColorString('#444466')));
+  /* camera/sensor pod */
+  gi.push(mkCyl(ARM*0.03,ARM*0.04, 0,bd*0.35,-bh*0.3, Cd.fromCssColorString('#222233')));
+  /* arms + motors + rotors + LEDs */
+  for(var i=0;i<4;i++){
+    var a=aa[i],s=Math.sin(a),c=Math.cos(a),tx=s*ARM,ty=c*ARM;
+    gi.push(mkArm(a,ARM,aw,ah, i<2?Cd.fromCssColorString('#cc2222'):Cd.fromCssColorString('#dddddd')));
+    gi.push(mkCyl(mR,mH, tx,ty,mH/2, silver));
+    gi.push(mkCyl(mR*0.45,mH*0.6, tx,ty,mH+mH*0.3, Cd.fromCssColorString('#333344')));
+    gi.push(mkCyl(rR,rH, tx,ty,mH+rH/2+mH*0.6, Cd.CYAN.withAlpha(0.2)));
+    var ls=ARM*0.022;
+    gi.push(mkBox(ls,ls,ls, tx,ty,mH+0.06, i<2?Cd.RED.withAlpha(0.9):Cd.GREEN.withAlpha(0.9)));
   }
+  /* landing gear: 4 legs + 2 skid rails */
+  var lx=ARM*0.3,ly=ARM*0.42;
+  gi.push(mkBox(gW,gW,gDrop, lx,ly,-bh/2-gDrop/2, gear));
+  gi.push(mkBox(gW,gW,gDrop, -lx,ly,-bh/2-gDrop/2, gear));
+  gi.push(mkBox(gW,gW,gDrop, lx,-ly,-bh/2-gDrop/2, gear));
+  gi.push(mkBox(gW,gW,gDrop, -lx,-ly,-bh/2-gDrop/2, gear));
+  var skZ=-bh/2-gDrop+sW/2;
+  gi.push(mkBox(sL,sW,sW, 0,ly,skZ, gear));
+  gi.push(mkBox(sL,sW,sW, 0,-ly,skZ, gear));
+  var p=new Cesium.Primitive({geometryInstances:gi,
+    appearance:new Cesium.PerInstanceColorAppearance({translucent:true,flat:false}),
+    asynchronous:false});
+  V.scene.primitives.add(p);
+  return p;
+}
+var drone3D=buildDrone();
 
-  // ── Load 3D Tiles ──────────────────────────────────────────
-  const tilesInfo = document.getElementById('tiles-info');
+/* ---------- polyline effects ---------- */
+var pC=V.scene.primitives.add(new Cesium.PolylineCollection());
+var headLine=pC.add({positions:[C3.ZERO,C3.ZERO],width:4,
+  material:Cesium.Material.fromType('Color',{color:Cd.LIME})});
+var altLine=pC.add({positions:[C3.ZERO,C3.ZERO],width:1,
+  material:Cesium.Material.fromType('Color',{color:Cd.CYAN.withAlpha(0.25)})});
 
-  (async function loadTiles() {
-    // Try Google Photorealistic 3D Tiles first (Cesium Ion asset 2275207)
-    try {
-      const tileset = await Cesium.Cesium3DTileset.fromIonAssetId(2275207);
-      viewer.scene.primitives.add(tileset);
-      tilesInfo.textContent = 'Google Photorealistic 3D Tiles';
-      return;
-    } catch (e) {
-      console.log('Google 3D Tiles not available, trying OSM Buildings...', e.message);
-    }
+/* ---------- entity effects ---------- */
+var d0=C3.fromDegrees(0,0,100);
+var lblE=V.entities.add({name:'Label',position:d0,
+  label:{text:'DRONE',font:'bold 13px Consolas',fillColor:Cd.CYAN,
+    style:Cesium.LabelStyle.FILL_AND_OUTLINE,outlineWidth:2,outlineColor:Cd.BLACK,
+    verticalOrigin:Cesium.VerticalOrigin.BOTTOM,pixelOffset:new Cesium.Cartesian2(0,-22),
+    disableDepthTestDistance:Number.POSITIVE_INFINITY,
+    scaleByDistance:new Cesium.NearFarScalar(15,1.3,500,0.45)}});
+var trailE=V.entities.add({name:'Trail',polyline:{positions:[d0],width:2.5,
+  material:new Cesium.PolylineGlowMaterialProperty({glowPower:0.15,color:Cd.CYAN.withAlpha(0.65)})}});
+var shadowE=V.entities.add({name:'Shadow',position:d0,
+  ellipse:{semiMajorAxis:3,semiMinorAxis:3,height:0,
+    material:Cd.BLACK.withAlpha(0.25),outline:false,
+    heightReference:Cesium.HeightReference.CLAMP_TO_GROUND}});
 
-    // Fallback: Cesium OSM Buildings (asset 96188)
-    try {
-      const buildings = await Cesium.Cesium3DTileset.fromIonAssetId(96188);
-      viewer.scene.primitives.add(buildings);
-      tilesInfo.textContent = 'Cesium OSM Buildings';
-    } catch (e2) {
-      console.warn('No 3D buildings available:', e2.message);
-      tilesInfo.textContent = 'Terrain only (no 3D buildings)';
-    }
-  })();
+/* ---------- state interpolation ---------- */
+function lerpA(a,b,t){var d=b-a;while(d>180)d-=360;while(d<-180)d+=360;return a+d*t;}
+function interpS(f){
+  if(!prev||!curr)return curr||prev;
+  return{lat:prev.lat+(curr.lat-prev.lat)*f,lon:prev.lon+(curr.lon-prev.lon)*f,
+    alt:prev.alt+(curr.alt-prev.alt)*f,
+    roll:lerpA(prev.roll,curr.roll,f),pitch:lerpA(prev.pitch,curr.pitch,f),
+    yaw:lerpA(prev.yaw,curr.yaw,f),
+    speed:prev.speed+(curr.speed-prev.speed)*f,vz:prev.vz+(curr.vz-prev.vz)*f,
+    soc:curr.soc,mode:curr.mode,time:curr.time,location:curr.location};}
 
-  // ── Drone Entity ───────────────────────────────────────────
-  const droneEntity = viewer.entities.add({
-    name: 'Drone',
-    position: Cesium.Cartesian3.fromDegrees(-73.985, 40.749, 50),
-    point: {
-      pixelSize: 14,
-      color: Cesium.Color.CYAN,
-      outlineColor: Cesium.Color.WHITE,
-      outlineWidth: 2,
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      scaleByDistance: new Cesium.NearFarScalar(20, 1.5, 1500, 0.5),
-    },
-    label: {
-      text: 'DRONE',
-      font: 'bold 13px Consolas',
-      fillColor: Cesium.Color.CYAN,
-      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-      outlineWidth: 2,
-      outlineColor: Cesium.Color.BLACK,
-      verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-      pixelOffset: new Cesium.Cartesian2(0, -22),
-      disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      scaleByDistance: new Cesium.NearFarScalar(20, 1.0, 800, 0.4),
-    },
-  });
+/* ---------- model matrix ---------- */
+var mmScratch=new M4();
+function updateDrone(s){
+  var cen=C3.fromDegrees(s.lon,s.lat,s.alt);
+  var enu=Cesium.Transforms.eastNorthUpToFixedFrame(cen);
+  var hpr=new Cesium.HeadingPitchRoll(
+    Cesium.Math.toRadians(s.yaw),Cesium.Math.toRadians(s.pitch),Cesium.Math.toRadians(s.roll));
+  var rot=M3.fromHeadingPitchRoll(hpr);
+  var rot4=M4.fromRotationTranslation(rot,C3.ZERO);
+  M4.multiply(enu,rot4,mmScratch);
+  drone3D.modelMatrix=mmScratch;
+  /* heading arrow via model matrix */
+  var tip=M4.multiplyByPoint(mmScratch,new C3(0,ARM*1.8,0),new C3());
+  headLine.positions=[cen,tip];
+  /* altitude line */
+  var gnd=C3.fromDegrees(s.lon,s.lat,0);
+  altLine.positions=[gnd,cen];
+  /* label */
+  lblE.position=cen;
+  lblE.label.text='ALT '+s.alt.toFixed(1)+'m  '+s.speed.toFixed(1)+'m/s';
+  /* trail */
+  trail.push(C3.clone(cen));
+  if(trail.length>TMAX)trail.shift();
+  if(trail.length>1)trailE.polyline.positions=trail.slice();
+  /* shadow */
+  shadowE.position=gnd;
+  var sr=Math.max(1.5,Math.min(8,s.alt*0.3+1));
+  shadowE.ellipse.semiMajorAxis=sr*1.2;
+  shadowE.ellipse.semiMinorAxis=sr;
+  shadowE.ellipse.material=Cd.BLACK.withAlpha(Math.max(0.03,0.25*Math.min(1,5/(s.alt+0.5))));
+}
 
-  // Altitude line (vertical dashed line from drone to ground)
-  const altLineEntity = viewer.entities.add({
-    name: 'AltLine',
-    polyline: {
-      positions: new Cesium.CallbackProperty(function() {
-        if (!lastState) return [];
-        const ground = Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, 0);
-        const air    = Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, lastState.alt);
-        return [ground, air];
-      }, false),
-      width: 1,
-      material: new Cesium.PolylineDashMaterialProperty({
-        color: Cesium.Color.CYAN.withAlpha(0.35),
-        dashLength: 8,
-      }),
-    },
-  });
+/* ---------- HUD ---------- */
+var hC=document.getElementById('hc'),stE=document.getElementById('stat');
+function upHUD(s){
+  var bc='',bp=(s.soc*100).toFixed(0);
+  if(s.soc<0.15)bc='crit';else if(s.soc<0.30)bc='warn';
+  hC.innerHTML=
+    '<span class="dim">MODE</span>  '+s.mode.toUpperCase()+'<br>'+
+    '<span class="dim">TIME</span>  '+s.time.toFixed(1)+'s<br><br>'+
+    '<span class="dim">LAT </span>  '+s.lat.toFixed(6)+'<br>'+
+    '<span class="dim">LON </span>  '+s.lon.toFixed(6)+'<br>'+
+    '<span class="dim">ALT </span>  '+s.alt.toFixed(1)+' m<br><br>'+
+    '<span class="dim">SPD </span>  '+s.speed.toFixed(1)+' m/s<br>'+
+    '<span class="dim">V/S </span>  '+(s.vz>=0?'+':'')+s.vz.toFixed(1)+' m/s<br><br>'+
+    '<span class="dim">ROLL</span>  '+s.roll.toFixed(1)+'&deg;<br>'+
+    '<span class="dim">PTCH</span>  '+s.pitch.toFixed(1)+'&deg;<br>'+
+    '<span class="dim">YAW </span>  '+s.yaw.toFixed(1)+'&deg;<br><br>'+
+    '<span class="dim">BAT </span>  <span class="'+bc+'">'+bp+'%</span><br>'+
+    '<span class="dim">LOC </span>  '+(s.location||'\u2014');}
 
-  // Flight trail polyline
-  const trailEntity = viewer.entities.add({
-    name: 'Trail',
-    polyline: {
-      positions: new Cesium.CallbackProperty(function() { return trailPositions; }, false),
-      width: 2.5,
-      material: new Cesium.PolylineGlowMaterialProperty({
-        glowPower: 0.15,
-        color: Cesium.Color.CYAN.withAlpha(0.7),
-      }),
-    },
-  });
-
-  // Ground shadow circle
-  const shadowEntity = viewer.entities.add({
-    name: 'Shadow',
-    position: new Cesium.CallbackProperty(function() {
-      if (!lastState) return Cesium.Cartesian3.ZERO;
-      return Cesium.Cartesian3.fromDegrees(lastState.lon, lastState.lat, 0);
-    }, false),
-    ellipse: {
-      semiMajorAxis: 2.0,
-      semiMinorAxis: 2.0,
-      material: Cesium.Color.BLACK.withAlpha(0.25),
-      heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
-    },
-  });
-
-  // ── HUD Update ─────────────────────────────────────────────
-  const hudContent = document.getElementById('hud-content');
-  const statusEl   = document.getElementById('status');
-
-  function updateHUD(s) {
-    let battClass = '';
-    const battPct = (s.soc * 100).toFixed(0);
-    if (s.soc < 0.15) battClass = 'crit';
-    else if (s.soc < 0.30) battClass = 'warn';
-
-    hudContent.innerHTML =
-      `<span class="dim">MODE</span>  ${s.mode.toUpperCase()}<br>` +
-      `<span class="dim">TIME</span>  ${s.time.toFixed(1)}s<br><br>` +
-      `<span class="dim">LAT </span>  ${s.lat.toFixed(6)}<br>` +
-      `<span class="dim">LON </span>  ${s.lon.toFixed(6)}<br>` +
-      `<span class="dim">ALT </span>  ${s.alt.toFixed(1)} m<br><br>` +
-      `<span class="dim">SPD </span>  ${s.speed.toFixed(1)} m/s<br>` +
-      `<span class="dim">V/S </span>  ${s.vz >= 0 ? '+' : ''}${s.vz.toFixed(1)} m/s<br><br>` +
-      `<span class="dim">ROLL</span>  ${s.roll.toFixed(1)}°<br>` +
-      `<span class="dim">PTCH</span>  ${s.pitch.toFixed(1)}°<br>` +
-      `<span class="dim">YAW </span>  ${s.yaw.toFixed(1)}°<br><br>` +
-      `<span class="dim">BAT </span>  <span class="${battClass}">${battPct}%</span><br>` +
-      `<span class="dim">LOC </span>  ${s.location || '—'}`;
+/* ---------- camera ---------- */
+function lrp(a,b,t,r){r.x=a.x+(b.x-a.x)*t;r.y=a.y+(b.y-a.y)*t;r.z=a.z+(b.z-a.z)*t;return r;}
+function upCam(s){
+  if(cam.mode===CM.FR||!s)return;
+  var cen=C3.fromDegrees(s.lon,s.lat,s.alt);
+  var T=Cesium.Transforms.eastNorthUpToFixedFrame(cen);
+  var hd=Cesium.Math.toRadians(s.yaw||0);
+  var Rc=M3.fromHeadingPitchRoll(new Cesium.HeadingPitchRoll(hd,0,0));
+  var Rf=M3.fromHeadingPitchRoll(new Cesium.HeadingPitchRoll(hd,
+    Cesium.Math.toRadians(s.pitch||0),Cesium.Math.toRadians(s.roll||0)));
+  var tP,tD,tU,d=cam.dist;
+  if(cam.mode===CM.CH){
+    var lo=M3.multiplyByVector(Rc,new C3(0,-d*0.7,d*0.38),new C3());
+    var wo=M4.multiplyByPointAsVector(T,lo,new C3());
+    tP=C3.add(cen,wo,new C3());
+    tD=C3.subtract(cen,tP,new C3());C3.normalize(tD,tD);
+    tU=M4.multiplyByPointAsVector(T,new C3(0,0,1),new C3());C3.normalize(tU,tU);
+  }else if(cam.mode===CM.OR){
+    cam.oAngle+=0.008;
+    var lo=new C3(Math.sin(cam.oAngle)*d,Math.cos(cam.oAngle)*d,d*0.35);
+    var wo=M4.multiplyByPointAsVector(T,lo,new C3());
+    tP=C3.add(cen,wo,new C3());
+    tD=C3.subtract(cen,tP,new C3());C3.normalize(tD,tD);
+    tU=M4.multiplyByPointAsVector(T,new C3(0,0,1),new C3());C3.normalize(tU,tU);
+  }else if(cam.mode===CM.TD){
+    var wo=M4.multiplyByPointAsVector(T,new C3(0,0,d*1.5),new C3());
+    tP=C3.add(cen,wo,new C3());
+    tD=C3.subtract(cen,tP,new C3());C3.normalize(tD,tD);
+    tU=M4.multiplyByPointAsVector(T,new C3(0,1,0),new C3());C3.normalize(tU,tU);
+  }else if(cam.mode===CM.FP){
+    var mo=M3.multiplyByVector(Rf,new C3(0,0.3,0.15),new C3());
+    var wm=M4.multiplyByPointAsVector(T,mo,new C3());
+    tP=C3.add(cen,wm,new C3());
+    var fd=M3.multiplyByVector(Rf,new C3(0,1,0),new C3());
+    tD=M4.multiplyByPointAsVector(T,fd,new C3());C3.normalize(tD,tD);
+    var fu=M3.multiplyByVector(Rf,new C3(0,0,1),new C3());
+    tU=M4.multiplyByPointAsVector(T,fu,new C3());C3.normalize(tU,tU);
   }
+  var lr=(cam.mode===CM.FP)?0.22:0.10;
+  if(!sP){sP=C3.clone(tP);sD=C3.clone(tD);sU=C3.clone(tU);}
+  else{lrp(sP,tP,lr,sP);lrp(sD,tD,lr,sD);lrp(sU,tU,lr,sU);
+    C3.normalize(sD,sD);C3.normalize(sU,sU);}
+  V.camera.setView({destination:sP,orientation:{direction:sD,up:sU}});
+}
 
-  // ── Camera ─────────────────────────────────────────────────
-  function updateCamera(s) {
-    if (!cameraFollow || !s) return;
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown',function(e){
+  switch(e.key.toLowerCase()){
+    case'1':cam.mode=CM.CH;sP=null;stE.textContent='Camera: CHASE';break;
+    case'2':cam.mode=CM.OR;sP=null;stE.textContent='Camera: ORBIT';break;
+    case'3':cam.mode=CM.TD;sP=null;stE.textContent='Camera: TOP-DOWN';break;
+    case'4':cam.mode=CM.FP;sP=null;stE.textContent='Camera: FPV';break;
+    case'5':case'f':cam.mode=CM.FR;stE.textContent='Camera: FREE';break;
+    case'=':case'+':cam.dist=Math.max(8,cam.dist*0.8);sP=null;break;
+    case'-':cam.dist=Math.min(500,cam.dist*1.25);sP=null;break;
+  }});
 
-    const pos     = Cesium.Cartesian3.fromDegrees(s.lon, s.lat, s.alt);
-    const heading = Cesium.Math.toRadians(s.yaw || 0);
-    const range   = CAM_RANGES[camRangeIdx];
-    const pitch   = Cesium.Math.toRadians(-22);
+/* ---------- polling (data fetch at 20Hz) ---------- */
+async function poll(){
+  try{
+    var r=await fetch('/state',{cache:'no-store'});
+    if(!r.ok)throw 0;
+    var s=await r.json();
+    if(s.lat===undefined||s.error)return;
+    pe=0;prev=curr;curr=s;pollT=performance.now();
+    upHUD(s);
+    if(ff){ff=false;sP=null;}
+  }catch(x){pe++;
+    stE.textContent=pe>40?'MATLAB disconnected':'Waiting for MATLAB...';
+    if(pe>40)hC.innerHTML='<span class="dim">Connection lost</span>';
+  }}
+setInterval(poll,PMS);
 
-    viewer.camera.lookAt(pos, new Cesium.HeadingPitchRange(
-      heading + Math.PI,  // Look from behind
-      pitch,
-      range
-    ));
-  }
-
-  // ── Keyboard ───────────────────────────────────────────────
-  document.addEventListener('keydown', function(e) {
-    switch (e.key.toLowerCase()) {
-      case 'f':
-        cameraFollow = !cameraFollow;
-        if (!cameraFollow) {
-          viewer.camera.lookAtTransform(Cesium.Matrix4.IDENTITY);
-        }
-        statusEl.textContent = cameraFollow ? 'Camera: FOLLOW' : 'Camera: FREE';
-        break;
-      case '1': camRangeIdx = 0; statusEl.textContent = 'Camera: CLOSE'; break;
-      case '2': camRangeIdx = 1; statusEl.textContent = 'Camera: MEDIUM'; break;
-      case '3': camRangeIdx = 2; statusEl.textContent = 'Camera: FAR';    break;
-    }
-  });
-
-  // ── State Polling ──────────────────────────────────────────
-  async function pollState() {
-    try {
-      const resp = await fetch('/state', { cache: 'no-store' });
-      if (!resp.ok) throw new Error(resp.status);
-
-      const state = await resp.json();
-      if (state.lat === undefined) {
-        setTimeout(pollState, POLL_MS);
-        return;
-      }
-
-      pollErrors = 0;
-      lastState = state;
-
-      // Update drone position + orientation
-      const pos = Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt);
-      droneEntity.position = pos;
-
-      const hpr = new Cesium.HeadingPitchRoll(
-        Cesium.Math.toRadians(state.yaw  || 0),
-        Cesium.Math.toRadians(state.pitch || 0),
-        Cesium.Math.toRadians(state.roll  || 0)
-      );
-      droneEntity.orientation = Cesium.Transforms.headingPitchRollQuaternion(pos, hpr);
-
-      // Label — altitude + speed
-      droneEntity.label.text = `ALT ${state.alt.toFixed(1)}m  ${state.speed.toFixed(1)}m/s`;
-
-      // Trail
-      trailPositions.push(Cesium.Cartesian3.clone(pos));
-      if (trailPositions.length > TRAIL_MAX) trailPositions.shift();
-
-      // Shadow size scales with altitude
-      const shadowR = Math.max(1.5, Math.min(8, state.alt * 0.12));
-      shadowEntity.ellipse.semiMajorAxis = shadowR;
-      shadowEntity.ellipse.semiMinorAxis = shadowR;
-
-      // HUD + Status
-      updateHUD(state);
-      statusEl.textContent =
-        `Connected — ${state.time.toFixed(1)}s | ` +
-        `Camera: ${cameraFollow ? 'FOLLOW' : 'FREE'} (${['CLOSE','MED','FAR'][camRangeIdx]})`;
-
-      // First fix: fly to drone
-      if (firstFix) {
-        firstFix = false;
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(state.lon, state.lat, state.alt + 200),
-          orientation: {
-            heading: Cesium.Math.toRadians(state.yaw || 0) + Math.PI,
-            pitch: Cesium.Math.toRadians(-30),
-            roll: 0,
-          },
-          duration: 2.0,
-          complete: function() { cameraFollow = true; },
-        });
-      }
-
-      updateCamera(state);
-
-    } catch (e) {
-      pollErrors++;
-      if (pollErrors > 40) {
-        statusEl.textContent = 'MATLAB disconnected. Restart sim with V key.';
-        hudContent.innerHTML = '<span class="dim">Connection lost</span>';
-      } else {
-        statusEl.textContent = 'Waiting for MATLAB...';
-      }
-    }
-
-    setTimeout(pollState, POLL_MS);
-  }
-
-  // Start polling
-  pollState();
-
+/* ---------- render loop (60fps with interpolation) ---------- */
+function render(){
+  requestAnimationFrame(render);
+  if(!curr)return;
+  var elapsed=(performance.now()-pollT)/1000;
+  var f=Math.min(1,elapsed/(PMS/1000));
+  var s=prev?interpS(f):curr;
+  updateDrone(s);
+  upCam(s);
+  stE.textContent='Connected \u2014 '+curr.time.toFixed(1)+'s | '+CN[cam.mode]+' | '+cam.dist.toFixed(0)+'m';
+}
+requestAnimationFrame(render);
 })();
 </script>
 </body>

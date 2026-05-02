@@ -6,3 +6,4 @@
 *.slxc
 slprj/
 .qodo/
+visualization/cesium/

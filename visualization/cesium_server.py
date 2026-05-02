@@ -1,8 +1,9 @@
 """Lightweight HTTP server for the Cesium 3D drone viewer.
 
-Serves two endpoints:
-  GET /       — The CesiumJS HTML viewer page (cached in memory)
-  GET /state  — Current drone state JSON (read from disk each request)
+Serves endpoints:
+  GET /           — The CesiumJS HTML viewer page (cached in memory)
+  GET /state      — Current drone state JSON (read from disk each request)
+  GET /cesium/*   — Local CesiumJS static assets (Cesium.js, widgets.css)
 
 Launched by cesium_bridge.m as a background process.
 Usage:
@@ -10,6 +11,7 @@ Usage:
 """
 
 import argparse
+import mimetypes
 import os
 import sys
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -17,16 +19,41 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 # Globals set from CLI args
 HTML_BYTES = b''
 STATE_PATH = ''
+HTML_DIR = ''   # directory containing cesium_viewer.html (for static assets)
+STATIC_CACHE = {}  # path -> bytes cache for cesium/ static files
 
 
 class Handler(BaseHTTPRequestHandler):
     """Minimal request handler — no directory listing, no logging spam."""
+
+    MIME_MAP = {
+        '.js':  'application/javascript',
+        '.css': 'text/css',
+        '.json': 'application/json',
+        '.wasm': 'application/wasm',
+    }
 
     def do_GET(self):
         if self.path == '/' or self.path == '/index.html':
             self._respond(200, 'text/html; charset=utf-8', HTML_BYTES)
         elif self.path == '/state':
             self._serve_state()
+        elif self.path.startswith('/cesium/'):
+            self._serve_static(self.path)
+        else:
+            self._respond(404, 'text/plain', b'Not Found')
+
+    def _serve_static(self, url_path):
+        """Serve cached static files from the cesium/ subdirectory."""
+        rel = url_path.lstrip('/')
+        if '..' in rel or rel.startswith('/'):
+            self._respond(403, 'text/plain', b'Forbidden')
+            return
+        # Serve from cache
+        if rel in STATIC_CACHE:
+            ext = os.path.splitext(rel)[1].lower()
+            ctype = self.MIME_MAP.get(ext, 'application/octet-stream')
+            self._respond(200, ctype, STATIC_CACHE[rel], cache=True)
         else:
             self._respond(404, 'text/plain', b'Not Found')
 
@@ -38,12 +65,15 @@ class Handler(BaseHTTPRequestHandler):
             body = b'{"error":"loading"}'
         self._respond(200, 'application/json; charset=utf-8', body)
 
-    def _respond(self, code, content_type, body):
+    def _respond(self, code, content_type, body, cache=False):
         self.send_response(code)
         self.send_header('Content-Type', content_type)
         self.send_header('Content-Length', str(len(body)))
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Cache-Control', 'no-cache, no-store')
+        if cache:
+            self.send_header('Cache-Control', 'public, max-age=86400')
+        else:
+            self.send_header('Cache-Control', 'no-cache, no-store')
         self.end_headers()
         self.wfile.write(body)
 
@@ -53,7 +83,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    global HTML_BYTES, STATE_PATH
+    global HTML_BYTES, STATE_PATH, HTML_DIR
 
     parser = argparse.ArgumentParser(description='Cesium drone viewer server')
     parser.add_argument('--port', type=int, default=8765)
@@ -67,8 +97,23 @@ def main():
         print(f'ERROR: HTML file not found: {args.html}', file=sys.stderr)
         sys.exit(1)
 
+    HTML_DIR = os.path.dirname(os.path.abspath(args.html))
+
     with open(args.html, 'rb') as f:
         HTML_BYTES = f.read()
+
+    # Pre-cache cesium/ static files into memory
+    cesium_dir = os.path.join(HTML_DIR, 'cesium')
+    if os.path.isdir(cesium_dir):
+        for fname in os.listdir(cesium_dir):
+            fpath = os.path.join(cesium_dir, fname)
+            if os.path.isfile(fpath):
+                rel_key = 'cesium/' + fname
+                with open(fpath, 'rb') as f:
+                    STATIC_CACHE[rel_key] = f.read()
+                sz_mb = len(STATIC_CACHE[rel_key]) / (1024 * 1024)
+                print(f'  Cached {rel_key} ({sz_mb:.1f} MB)')
+    print(f'Static cache: {len(STATIC_CACHE)} files loaded')
 
     server = HTTPServer(('127.0.0.1', args.port), Handler)
     print(f'Cesium server listening on http://localhost:{args.port}')

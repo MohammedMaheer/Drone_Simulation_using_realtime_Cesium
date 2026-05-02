@@ -97,6 +97,8 @@ function live_drone_sim(cfg_input)
     auto.prev_alt_err   = 0;
     auto.prev_roll_err  = 0;
     auto.prev_pitch_err = 0;
+    auto.alt_d_filt     = 0;        % Low-pass filtered altitude derivative
+    auto.vel_damp_filt  = [0;0];    % Filtered velocity for damping
 
     % Control inputs (from keyboard)
     ctrl.throttle_input = 0;
@@ -436,18 +438,18 @@ function live_drone_sim(cfg_input)
         if keys.space; ctrl.throttle_input = ctrl.throttle_input + 1; end
         if keys.shift; ctrl.throttle_input = ctrl.throttle_input - 1; end
 
-        %% Wind (Dryden turbulence or simple sinusoidal)
+        %% Wind (Dryden turbulence or simple sinusoidal — attenuated for stability)
         if viz.show_wind
             t_w = sim.time;
             alt_w = max(1, -sim.state(3));
             airspeed = norm(sim.state(4:6));
             if wind_cfg.use_dryden
-                % MIL-DTL-9490E Dryden continuous turbulence model
-                wind_cfg.steady_wind = [2*sin(0.3*t_w); 1.5*cos(0.2*t_w); 0];
+                wind_cfg.steady_wind = [1.0*sin(0.3*t_w); 0.8*cos(0.2*t_w); 0];
                 [viz.wind_vec, ~] = dryden_wind_model(t_w, sim.dt_render, alt_w, ...
                     airspeed, wind_cfg.steady_wind, wind_cfg.turb_intensity);
+                viz.wind_vec = viz.wind_vec * 0.5;  % Scale down for realistic hover
             else
-                viz.wind_vec = [2*sin(0.3*t_w); 1.5*cos(0.2*t_w); 0] + 0.3*randn(3,1);
+                viz.wind_vec = [1.0*sin(0.3*t_w); 0.8*cos(0.2*t_w); 0] + 0.15*randn(3,1);
             end
         else
             viz.wind_vec = [0;0;0];
@@ -535,10 +537,13 @@ function live_drone_sim(cfg_input)
         %% Wrap yaw angle to [-pi, pi] — CRITICAL for stability
         sim.state(9) = atan2(sin(sim.state(9)), cos(sim.state(9)));
 
-        %% Propeller vibration model
+        %% Propeller vibration model (cosmetic only — heavily attenuated)
+        % Scale factor 0.02 keeps visual vibration on strip charts
+        % without destabilizing hover or flight controllers
         [vib_f, vib_m] = propeller_vibration_model(sim.motor_speeds, layout, dp, sim.time);
-        sim.state(4:6)  = sim.state(4:6)  + (vib_f / dp.mass) * dt;
-        sim.state(10:12) = sim.state(10:12) + (dp.I \ vib_m) * dt;
+        vib_scale = 0.02;
+        sim.state(4:6)  = sim.state(4:6)  + vib_scale * (vib_f / dp.mass) * dt;
+        sim.state(10:12) = sim.state(10:12) + vib_scale * (dp.I \ vib_m) * dt;
 
         %% Velocity clamp (prevent runaway speed)
         h_vel = norm(sim.state(4:5));
@@ -634,11 +639,13 @@ function live_drone_sim(cfg_input)
     end
 
     %% ============================================================
-    %% AUTO FLIGHT CONTROLLER (intelligent stabilization)
+    %% AUTO FLIGHT CONTROLLER (smooth stabilization with filtered PID)
     %% ============================================================
     function [thrust_cmd, moment_cmds] = auto_flight_controller(st, dt, alt)
         euler = st(7:9);
         omega = st(10:12);
+        vz_ned = st(6);        % NED: negative = climbing
+        climb_rate = -vz_ned;  % positive = up
 
         % Desired attitude from input
         desired_roll  = ctrl.roll_input  * ctrl.max_tilt;
@@ -650,55 +657,71 @@ function live_drone_sim(cfg_input)
         ctrl.target_alt = ctrl.target_alt + climb_rate_cmd * dt;
         ctrl.target_alt = max(0, min(80, ctrl.target_alt));
 
-        %% Altitude PID with dynamic gain scaling
+        %% Altitude PID — D-on-measurement (use velocity, not error derivative)
         alt_err = ctrl.target_alt - alt;
+
+        % Integral with anti-windup and decay
         auto.alt_integral = auto.alt_integral + alt_err * dt;
-        auto.alt_integral = max(-5, min(5, auto.alt_integral));  % Anti-windup
-        d_alt_err = (alt_err - auto.prev_alt_err) / dt;
-        auto.prev_alt_err = alt_err;
+        auto.alt_integral = max(-3, min(3, auto.alt_integral));
 
-        % Gains scaled to drone mass (heavier = more thrust authority needed)
-        Kp_a = 5.0 * dp.mass / 1.5;
-        Ki_a = 0.8 * dp.mass / 1.5;
-        Kd_a = 3.5 * dp.mass / 1.5;
+        % D-term: use measured climb rate (not d(error)/dt) — smooth, no noise
+        % Desired climb rate from altitude error (proportional path)
+        desired_climb = alt_err * 1.5;  % Soft P on altitude → climb rate
+        desired_climb = max(-cp.alt.max_descent, min(cp.alt.max_climb, desired_climb));
+        climb_err = desired_climb - climb_rate;
 
-        thrust_correction = Kp_a * alt_err + Ki_a * auto.alt_integral + Kd_a * d_alt_err;
+        % Low-pass filter on D-term for extra smoothness
+        alpha_d = dt / (dt + 0.05);  % ~3 Hz cutoff (tau = 0.05s)
+        auto.alt_d_filt = (1 - alpha_d) * auto.alt_d_filt + alpha_d * climb_err;
 
-        % Feed-forward: compensate for tilt
-        tilt_comp = 1 / max(0.5, cos(euler(1)) * cos(euler(2)));
-        thrust_cmd = (dp.mass * dp.g + thrust_correction) * tilt_comp;
+        % Gains scaled to drone mass
+        mass_scale = dp.mass / 1.5;
+        Kp_a = 4.0 * mass_scale;
+        Ki_a = 0.6 * mass_scale;
+        Kd_a = 2.5 * mass_scale;
+
+        thrust_correction = Kp_a * alt_err + Ki_a * auto.alt_integral + Kd_a * auto.alt_d_filt;
+
+        % Feed-forward: compensate for tilt (clamped to prevent singularity)
+        cos_tilt = max(0.7, cos(euler(1)) * cos(euler(2)));
+        thrust_cmd = (dp.mass * dp.g + thrust_correction) / cos_tilt;
         thrust_cmd = max(0, min(dp.max_thrust_total * 0.95, thrust_cmd));
 
-        %% Attitude PD with dynamic gain scaling
-        % Scale gains based on inertia
+        %% Attitude PD — D-on-measurement (use gyro rates, not error derivative)
+        % Gains scaled to inertia
         Kp_roll  = 8.0 * dp.Ixx / 0.0135;
-        Kd_roll  = 2.5 * dp.Ixx / 0.0135;
+        Kd_roll  = 2.0 * dp.Ixx / 0.0135;
         Kp_pitch = 8.0 * dp.Iyy / 0.0135;
-        Kd_pitch = 2.5 * dp.Iyy / 0.0135;
+        Kd_pitch = 2.0 * dp.Iyy / 0.0135;
 
         roll_err  = desired_roll  - euler(1);
         pitch_err = desired_pitch - euler(2);
 
+        % PD with D-on-measurement (uses gyro omega directly)
         tau_x = Kp_roll  * roll_err  - Kd_roll  * omega(1);
         tau_y = Kp_pitch * pitch_err - Kd_pitch * omega(2);
-        tau_z = 0.8 * dp.Izz / 0.024 * (desired_yaw_rate - omega(3));
+        tau_z = 0.6 * dp.Izz / 0.024 * (desired_yaw_rate - omega(3));
 
-        % Velocity damping — always active, stronger when no input
+        % Velocity damping — gentle, prevents drift without fighting attitude
         vel_body = euler_to_R_local(euler(1), euler(2), euler(3))' * st(4:6);
-        h_speed = norm(st(4:5));  % horizontal speed
+        h_speed = norm(st(4:5));
+
+        % Low-pass filter on body velocity for smooth damping
+        alpha_v = dt / (dt + 0.1);   % ~1.6 Hz cutoff
+        auto.vel_damp_filt = (1 - alpha_v) * auto.vel_damp_filt + alpha_v * vel_body(1:2);
+
         if ctrl.roll_input == 0 && ctrl.pitch_input == 0
-            v_damp = 2.5;   % Strong braking when no stick input
+            v_damp = 1.5;   % Moderate braking when sticks centered
         else
-            v_damp = 0.8;   % Moderate damping while flying
+            v_damp = 0.4;   % Light damping while flying
         end
-        % Progressive braking: ramp up as speed approaches limit
-        if h_speed > ctrl.max_speed * 0.6
-            v_damp = v_damp + 5.0 * ((h_speed - ctrl.max_speed*0.6) / (ctrl.max_speed*0.4));
+        % Progressive braking near speed limit
+        if h_speed > ctrl.max_speed * 0.7
+            v_damp = v_damp + 3.0 * ((h_speed - ctrl.max_speed*0.7) / (ctrl.max_speed*0.3));
         end
-        % SIGN CONVENTION: forward vel (vx_body>0) needs nose-UP (+tau_y) to brake
-        %                  rightward vel (vy_body>0) needs roll-LEFT (-tau_x) to brake
-        tau_y = tau_y + v_damp * vel_body(1);   % Pitch up to brake forward
-        tau_x = tau_x - v_damp * vel_body(2);   % Roll left to brake rightward
+        % Use filtered velocity for damping torques
+        tau_y = tau_y + v_damp * auto.vel_damp_filt(1);
+        tau_x = tau_x - v_damp * auto.vel_damp_filt(2);
 
         moment_cmds = [tau_x; tau_y; tau_z];
     end
@@ -717,20 +740,18 @@ function live_drone_sim(cfg_input)
         y_in = ctrl.yaw_input   * (1-expo) + ctrl.yaw_input^3   * expo;
 
         % --- Thrust: hover baseline + climb rate control ---
-        % SPACE = go up, SHIFT = go down, nothing = hold altitude (hover)
         hover_thr = dp.mass * dp.g;
-        % Tilt compensation so thrust stays constant during banking
-        tilt_comp = 1 / max(0.7, cos(euler(1)) * cos(euler(2)));
+        cos_tilt = max(0.7, cos(euler(1)) * cos(euler(2)));
 
-        % Map throttle input to desired climb rate (not raw thrust)
-        desired_vz = ctrl.throttle_input * ctrl.max_climb_rate;  % m/s
+        % Map throttle input to desired climb rate
+        desired_vz = ctrl.throttle_input * ctrl.max_climb_rate;
         actual_vz = -st(6);  % positive = climb in NED
 
-        % Velocity error drives thrust correction (like a simple altitude-rate PID)
+        % Smooth climb rate PID (P-only on velocity error)
         vz_err = desired_vz - actual_vz;
-        thr_correction = vz_err * dp.mass * 3.0;  % P-gain on climb rate
+        thr_correction = vz_err * dp.mass * 2.5;
 
-        thrust_cmd = (hover_thr + thr_correction) * tilt_comp;
+        thrust_cmd = (hover_thr + thr_correction) / cos_tilt;
         thrust_cmd = max(0, min(dp.max_thrust_total * 0.85, thrust_cmd));
 
         if ctrl.self_level
@@ -740,29 +761,29 @@ function live_drone_sim(cfg_input)
             desired_pitch = p_in * max_tilt_man;
             desired_yaw_rate = y_in * ctrl.max_yaw_rate;
 
-            % PD attitude controller (scaled to inertia)
-            Kp_r = 14.0 * dp.Ixx / 0.0135;
-            Kd_r =  4.0 * dp.Ixx / 0.0135;
-            Kp_p = 14.0 * dp.Iyy / 0.0135;
-            Kd_p =  4.0 * dp.Iyy / 0.0135;
+            % PD attitude controller (D-on-measurement via gyro rates)
+            Kp_r = 10.0 * dp.Ixx / 0.0135;
+            Kd_r =  3.0 * dp.Ixx / 0.0135;
+            Kp_p = 10.0 * dp.Iyy / 0.0135;
+            Kd_p =  3.0 * dp.Iyy / 0.0135;
 
             roll_err  = desired_roll  - euler(1);
             pitch_err = desired_pitch - euler(2);
 
             tau_x = Kp_r * roll_err  - Kd_r * omega(1);
             tau_y = Kp_p * pitch_err - Kd_p * omega(2);
-            tau_z = 1.5 * dp.Izz / 0.024 * (desired_yaw_rate - omega(3));
+            tau_z = 1.0 * dp.Izz / 0.024 * (desired_yaw_rate - omega(3));
 
-            % Horizontal velocity damping (prevents ice-skating)
+            % Filtered velocity damping (prevents drift)
             vel_body = euler_to_R_local(euler(1), euler(2), euler(3))' * st(4:6);
             h_speed = norm(st(4:5));
             if ctrl.roll_input == 0 && ctrl.pitch_input == 0
-                v_damp = 3.0;   % Strong braking when sticks centered
+                v_damp = 2.0;
             else
-                v_damp = 0.6;   % Light when maneuvering
+                v_damp = 0.4;
             end
             if h_speed > ctrl.max_speed * 0.7
-                v_damp = v_damp + 4.0 * ((h_speed - ctrl.max_speed*0.7) / (ctrl.max_speed*0.3));
+                v_damp = v_damp + 3.0 * ((h_speed - ctrl.max_speed*0.7) / (ctrl.max_speed*0.3));
             end
             tau_y = tau_y + v_damp * vel_body(1);
             tau_x = tau_x - v_damp * vel_body(2);
@@ -773,20 +794,15 @@ function live_drone_sim(cfg_input)
             desired_pitch_rate = p_in * max_rate;
             desired_yaw_rate   = y_in * ctrl.max_yaw_rate;
 
+            % P-only on rate error (avoids noisy rate-derivative)
             Kp_rate = 0.5 * dp.Ixx / 0.0135;
-            Kd_rate = 0.02 * dp.Ixx / 0.0135;
 
             rate_err_r = desired_roll_rate  - omega(1);
             rate_err_p = desired_pitch_rate - omega(2);
             rate_err_y = desired_yaw_rate   - omega(3);
 
-            d_err_r = (rate_err_r - manual_ctrl.prev_roll_err) / dt;
-            d_err_p = (rate_err_p - manual_ctrl.prev_pitch_err) / dt;
-            manual_ctrl.prev_roll_err  = rate_err_r;
-            manual_ctrl.prev_pitch_err = rate_err_p;
-
-            tau_x = Kp_rate * rate_err_r + Kd_rate * d_err_r;
-            tau_y = Kp_rate * rate_err_p + Kd_rate * d_err_p;
+            tau_x = Kp_rate * rate_err_r;
+            tau_y = Kp_rate * rate_err_p;
             tau_z = 0.8 * dp.Izz / 0.024 * rate_err_y;
         end
 

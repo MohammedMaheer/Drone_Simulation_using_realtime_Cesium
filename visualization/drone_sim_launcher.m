@@ -339,8 +339,16 @@ function drone_sim_launcher()
             delete(fig);
             live_drone_sim(cfg);
         catch err
-            set(h_status, 'String', ['Error: ' err.message]);
-            set(h_status, 'ForegroundColor', [0.95 0.3 0.3]);
+            fprintf(2, 'Sim error: %s\n', err.message);
+            for k = 1:length(err.stack)
+                fprintf(2, '  In %s (line %d)\n', err.stack(k).name, err.stack(k).line);
+            end
+            if isvalid(fig)
+                set(h_status, 'String', ['Error: ' err.message]);
+                set(h_status, 'ForegroundColor', [0.95 0.3 0.3]);
+            else
+                errordlg(err.message, 'Drone Sim Error');
+            end
         end
     end
 

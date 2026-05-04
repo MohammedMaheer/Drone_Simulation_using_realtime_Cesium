@@ -119,8 +119,11 @@ function capture_visuals()
     box_xy = 1.6 * L_max;          % half-extent in X and Y
     box_z  = 0.45 * L_max;         % half-extent in Z
 
-    fh = figure('Color','w','Position',[60 60 1700 460]);
-    tl = tiledlayout(fh,1,5,'TileSpacing','compact','Padding','compact');
+    % 2 rows x 3 cols layout (one slot left empty) yields a near-square
+    % aspect so each subplot is rendered at much higher visual resolution
+    % when the figure is fit to the IEEE column width in LaTeX.
+    fh = figure('Color','w','Position',[60 60 1500 1000]);
+    tl = tiledlayout(fh,2,3,'TileSpacing','compact','Padding','compact');
     for k = 1:numel(presets)
         cfg = drone_config(presets{k});
         ax  = nexttile;
@@ -137,12 +140,17 @@ function capture_visuals()
         ylim(ax, [-box_xy  box_xy]);
         zlim(ax, [-box_z   box_z]);
         daspect(ax, [1 1 1]);
-        title(ax, titles{k}, 'Color','k','FontWeight','bold','FontSize',12);
-        set(ax,'XColor','k','YColor','k','ZColor','k','Color','w');
+        title(ax, titles{k}, 'Color','k','FontWeight','bold','FontSize',14);
+        set(ax,'XColor','k','YColor','k','ZColor','k','Color','w', ...
+               'FontSize',11);
         xlabel(ax,'X [m]'); ylabel(ax,'Y [m]'); zlabel(ax,'Z [m]');
     end
+    % Hide the unused 6th tile (2x3 grid, 5 presets) so it does not
+    % render as an empty axis.
+    ax_empty = nexttile;
+    set(ax_empty,'Visible','off');
     title(tl,'3-D Rigid-Body Renders of the Five Built-in Airframe Presets', ...
-          'FontWeight','bold','Color','k','FontSize',14);
+          'FontWeight','bold','Color','k','FontSize',16);
     exportgraphics(fh, fullfile(out_dir,'fig15_drone_3d_models.png'), ...
         'Resolution', 240, 'BackgroundColor','white');
     fprintf('  wrote fig15_drone_3d_models.png\n');

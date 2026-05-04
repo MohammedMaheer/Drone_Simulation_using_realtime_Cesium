@@ -242,7 +242,7 @@ the post-flight replay.
 
 \begin{figure*}[!htbp]
 \centering
-\includegraphics[width=0.98\textwidth]{fig15_drone_3d_models.png}
+\includegraphics[width=0.85\textwidth]{fig15_drone_3d_models.png}
 \caption{3-D rigid-body renderings of the five built-in airframe
 presets, drawn from the same configuration structs that drive the
 dynamics. From left to right: \texttt{micro\_tri} (180\,mm),
@@ -429,32 +429,32 @@ latitude/longitude/altitude), pick a flight mode (manual or auto-
 stabilised), and toggle wind, traffic, online map tiles, and the
 precise battery model before launching the simulator.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!htbp]
 \centering
-\includegraphics[width=0.85\columnwidth]{fig14_launcher_ui.png}
+\includegraphics[width=0.65\textwidth]{fig14_launcher_ui.png}
 \caption{Pre-flight setup UI of the simulator. The user picks a
 preset (or fully custom airframe), a real-world location, the
 flight mode, and environmental options before pressing FLY.}
 \label{fig:launcher}
-\end{figure}
+\end{figure*}
 
 \subsection{Live telemetry dashboard}
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.85\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig9_dashboard_takeoff.png}
   \caption{Takeoff ($t=5$\,s).}
   \label{fig:dash_to}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\end{subfigure}\\[6pt]
+\begin{subfigure}[t]{0.85\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig10_dashboard_cruise.png}
   \caption{Cruise ($t=25$\,s).}
   \label{fig:dash_cruise}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\end{subfigure}\\[6pt]
+\begin{subfigure}[t]{0.85\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig11_dashboard_complete.png}
   \caption{Complete ($t=59$\,s).}
@@ -475,21 +475,21 @@ progress.
 
 \subsection{Animated 3-D replay}
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig16_anim_3d_inflight.png}
   \caption{Animated 3-D replay frame.}
   \label{fig:anim}
 \end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig13_3d_trajectory.png}
   \caption{3-D mission trajectory.}
   \label{fig:traj3d}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\end{subfigure}\\[8pt]
+\begin{subfigure}[t]{0.85\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig12_post_flight_overview.png}
   \caption{Six-panel post-flight summary.}
@@ -590,21 +590,21 @@ from the lumped equivalent-circuit battery model~\cite{plett}. Average
 hover power matches the analytical estimate (216\,W at 1.5\,kg)
 within 1.5\,\%.
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig4_ekf_residuals.png}
   \caption{EKF position residuals.}
   \label{fig:ekf}
 \end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\begin{subfigure}[t]{0.48\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig5_battery_thermal.png}
   \caption{Battery SOC and total power.}
   \label{fig:batt}
-\end{subfigure}\hfill
-\begin{subfigure}[t]{0.32\textwidth}
+\end{subfigure}\\[8pt]
+\begin{subfigure}[t]{0.7\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig6_payload_release.png}
   \caption{Payload-release transient.}

@@ -67,10 +67,10 @@ ships with five factory-tuned presets covering the full design
 envelope from a 180\,mm micro tricopter to a 1\,m octo lifter. A
 6-DOF Newton--Euler rigid-body dynamics model is integrated with an
 explicit RK4 scheme at 1\,kHz, augmented with calibrated aerodynamic
-effects --- Cheeseman--Bennett ground effect, blade flapping with
+effects: Cheeseman--Bennett ground effect, blade flapping with
 advance-ratio correction, gyroscopic precession, hub drag, and ISA
-altitude air-density correction --- and a high-fidelity propulsion
-stack composed of a blade-element-momentum-theory (BEMT) propeller,
+altitude air-density correction. The propulsion stack is composed of
+a blade-element-momentum-theory (BEMT) propeller,
 a non-linear brushless-DC motor with thermal sub-model, and an
 electronic-speed-controller (ESC) lag. The atmospheric environment
 includes an MIL-DTL-9490E Dryden turbulence model with
@@ -100,9 +100,9 @@ thermal model, CesiumJS, reproducible research
 \IEEEPARstart{U}{nmanned} multirotor aerial vehicles have become
 indispensable across industrial, defence, commercial, and research
 domains~\cite{rotors2016}. As mission requirements grow increasingly
-complex --- diverse airframe topologies, heavier payloads, longer
+complex, with diverse airframe topologies, heavier payloads, longer
 endurance and robust disturbance rejection in cluttered or windy
-environments --- the reliance on empirical, trial-and-error physical
+environments, the reliance on empirical, trial-and-error physical
 prototyping has become prohibitively expensive, slow and risky. A
 high-fidelity, fully scripted simulator that captures the rotor,
 sensor, environment and energy subsystems with sufficient realism
@@ -114,14 +114,14 @@ high-fidelity, fully scripted multirotor simulator is now well
 established. Industry-grade stacks such as PX4 SITL, ArduPilot SITL,
 Gazebo/RotorS, jMAVSim and AirSim provide excellent fidelity but bind
 the user to specific autopilot ecosystems, ROS toolchains, or
-game-engine renderers --- making it difficult to inspect intermediate
+game-engine renderers. This makes it difficult to inspect intermediate
 quantities (rotor torque, battery internal resistance, sensor
 latency), to swap out individual subsystems, or to drive a
 publication-quality figure deterministically from a saved log.
 Conversely, the textbook quadrotor models that dominate undergraduate
 control courses tend to assume a constant thrust coefficient, ideal
-sensors, perfect alignment, and an X-frame quadcopter --- which
-silently disqualifies them as a starting point for studying
+sensors, perfect alignment, and an X-frame quadcopter. Such models
+silently disqualify themselves as a starting point for studying
 tricopters, hexacopters, octocopters, payload mechanics, ground
 effect, propeller vibration, motor saturation, or battery thermal
 runaway.
@@ -198,9 +198,10 @@ The framework is organised into eight orthogonal modules:
 \texttt{environment/} (Dryden wind), \texttt{navigation/}
 (waypoint manager and missions), \texttt{telemetry/} (logger and
 dashboard) and \texttt{visualization/} (3-D plot, animation, Cesium
-bridge). Three loop rates --- 1\,kHz physics, 250\,Hz attitude/rate
-inner loop, 50\,Hz position outer loop --- are enforced by a single
-deterministic scheduler implemented in \texttt{run\_simulation.m}.
+bridge). Three loop rates are used: 1\,kHz physics, 250\,Hz
+attitude/rate inner loop, and 50\,Hz position outer loop. They are
+enforced by a single deterministic scheduler implemented in
+\texttt{run\_simulation.m}.
 Fig.~\ref{fig:pipeline} depicts the data flow.
 
 \begin{figure*}[!htbp]
@@ -216,7 +217,7 @@ call.}
 \end{figure*}
 
 \subsection{Configuration}
-Each simulation begins with a \emph{drone configuration} --- a
+Each simulation begins with a \emph{drone configuration}, a
 struct returned by \texttt{drone\_config(name)} that contains rigid-
 body inertia, motor and propeller parameters, battery chemistry, ESC
 parameters, motor layout (positions and spin directions), aerodynamic
@@ -448,19 +449,19 @@ flight mode, and environmental options before pressing FLY.}
 
 \begin{figure*}[!htbp]
 \centering
-\begin{subfigure}[t]{0.85\textwidth}
+\begin{subfigure}[t]{0.7\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig9_dashboard_takeoff.png}
   \caption{Takeoff ($t=5$\,s).}
   \label{fig:dash_to}
 \end{subfigure}\\[6pt]
-\begin{subfigure}[t]{0.85\textwidth}
+\begin{subfigure}[t]{0.7\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig10_dashboard_cruise.png}
   \caption{Cruise ($t=25$\,s).}
   \label{fig:dash_cruise}
 \end{subfigure}\\[6pt]
-\begin{subfigure}[t]{0.85\textwidth}
+\begin{subfigure}[t]{0.7\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig11_dashboard_complete.png}
   \caption{Complete ($t=59$\,s).}
@@ -472,9 +473,9 @@ battery state and waypoint progress are visible at a glance.}
 \label{fig:dash}
 \end{figure*}
 
-Three captures of the live MATLAB telemetry dashboard --- at takeoff
+Three captures of the live MATLAB telemetry dashboard, at takeoff
 ($t=5$\,s), mid-mission cruise ($t=25$\,s), and mission completion
-($t=59$\,s) --- are shown in Fig.~\ref{fig:dash}. The dashboard
+($t=59$\,s), are shown in Fig.~\ref{fig:dash}. The dashboard
 refreshes at 50\,Hz using \texttt{animatedline} and displays attitude,
 ground track, altitude, motor thrust, battery state, and waypoint
 progress.
@@ -495,7 +496,7 @@ progress.
   \caption{3-D mission trajectory.}
   \label{fig:traj3d}
 \end{subfigure}\\[8pt]
-\begin{subfigure}[t]{0.85\textwidth}
+\begin{subfigure}[t]{0.7\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig12_post_flight_overview.png}
   \caption{Six-panel post-flight summary.}
@@ -514,9 +515,9 @@ mid-mission frame with a telemetry overlay rendered alongside the
 \subsection{3-D mission trajectory and post-flight overview}
 Fig.~\ref{fig:replay}(b) renders the complete waypoint mission as a
 3-D ground/air track. Fig.~\ref{fig:replay}(c) is the standard
-six-panel \texttt{plot\_flight\_data} summary --- ground track,
-altitude, speed, attitude, motor speeds and battery curve --- emitted
-at the end of every run.
+six-panel \texttt{plot\_flight\_data} summary covering ground track,
+altitude, speed, attitude, motor speeds and battery curve. It is
+emitted at the end of every run.
 
 \subsection{CesiumJS geo-referenced globe}
 A Python micro-server (\texttt{cesium\_server.py}) bridges the live
@@ -563,7 +564,7 @@ Fig.~\ref{fig:waypoint} shows the ground track and altitude profile.
 
 \subsection{Wind rejection}
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
 \begin{subfigure}[t]{0.48\textwidth}
   \centering
@@ -610,7 +611,7 @@ within 1.5\,\%.
   \caption{Battery SOC and total power.}
   \label{fig:batt}
 \end{subfigure}\\[8pt]
-\begin{subfigure}[t]{0.7\textwidth}
+\begin{subfigure}[t]{0.6\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig6_payload_release.png}
   \caption{Payload-release transient.}
@@ -632,7 +633,7 @@ Fig.~\ref{fig:inner} verifies the inner loops. Motor RPMs are smooth
 (no commutation chatter from the ESC lag), and the attitude reference
 is tracked with $<$1$^\circ$ RMS.
 
-\begin{figure*}[!t]
+\begin{figure*}[!htbp]
 \centering
 \begin{subfigure}[t]{0.48\textwidth}
   \centering
@@ -666,7 +667,7 @@ CesiumJS WebGL bridge to a real Earth globe. Across a representative
 60\,s waypoint mission the framework delivers sub-15\,cm hover RMS,
 $<$2\,m waypoint deviation in 8\,m/s wind, and battery-energy
 predictions within 4\,\% of nameplate. The full reproduction
-pipeline --- including the eighteen figures in this paper --- is
+pipeline, including the eighteen figures in this paper, is
 released publicly~\cite{repo}.
 
 Future work will (i) add a moving-base aerodynamic interaction model

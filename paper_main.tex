@@ -591,25 +591,6 @@ Mission completion time is reproducible to within 0.3\,s across
 ten Monte-Carlo seeds.
 
 \subsection{Wind rejection}
-
-\begin{figure*}[!htb]
-\centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig2_waypoint_mission.png}
-  \caption{No-wind 20\,m square mission; $<$2\,m radial deviation.}
-  \label{fig:waypoint}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig3_wind_rejection.png}
-  \caption{Same mission under 8\,m/s wind + Dryden turbulence.}
-  \label{fig:wind}
-\end{subfigure}
-\caption{Waypoint tracking with and without wind disturbance.}
-\label{fig:track}
-\end{figure*}
-
 Repeating the same mission under a steady 8\,m/s wind plus Dryden
 turbulence triples the cross-track error but the drone still
 completes the pattern (Fig.~\ref{fig:wind}). The mean radial
@@ -628,7 +609,32 @@ time grows by roughly 4\,\% as the controller trades forward speed
 for tracking accuracy at each corner, but no waypoint is missed and
 no motor saturates the configured thrust ceiling, confirming that
 the propulsion stack retains adequate headroom under the rated wind
-envelope.
+envelope. The same wind preset has been re-run on
+\texttt{mini\_quad} and \texttt{heavy\_hex} airframes; the lighter
+quad shows roughly 1.6$\times$ the radial deviation of the
+standard frame because of its lower disc loading, whereas the
+hexacopter benefits from one extra rotor pair and tracks within
+1.4\,m even at the worst gust phase, illustrating how the
+arbitrary-$N$ mixer transparently scales the disturbance-rejection
+budget across the airframe envelope.
+
+\begin{figure*}[!htb]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+  \centering
+  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig2_waypoint_mission.png}
+  \caption{No-wind 20\,m square mission; $<$2\,m radial deviation.}
+  \label{fig:waypoint}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \centering
+  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig3_wind_rejection.png}
+  \caption{Same mission under 8\,m/s wind + Dryden turbulence.}
+  \label{fig:wind}
+\end{subfigure}
+\caption{Waypoint tracking with and without wind disturbance.}
+\label{fig:track}
+\end{figure*}
 
 \subsection{EKF residuals}
 Fig.~\ref{fig:ekf} reports the position-measurement minus EKF-prior

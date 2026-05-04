@@ -24,19 +24,20 @@
 % LaTeX to emit large blank pages. Figures are instead allowed to
 % float naturally with [!htbp] and a single \FloatBarrier is placed
 % just before the bibliography.
-\renewcommand{\topfraction}{0.97}
-\renewcommand{\bottomfraction}{0.95}
-\renewcommand{\textfraction}{0.04}
-\renewcommand{\floatpagefraction}{0.85}
-\renewcommand{\dbltopfraction}{0.97}
-\renewcommand{\dblfloatpagefraction}{0.85}
-\setcounter{topnumber}{4}
-\setcounter{bottomnumber}{4}
-\setcounter{totalnumber}{8}
-\setcounter{dbltopnumber}{4}
-% Use \flushbottom so LaTeX vertically justifies pages, eliminating
-% the trailing blank space at the bottom of figure-heavy pages.
-\flushbottom
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.85}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}
+\renewcommand{\dbltopfraction}{0.92}
+\renewcommand{\dblfloatpagefraction}{0.75}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\setcounter{dbltopnumber}{3}
+% IEEEtran defaults to \raggedbottom for conference papers; keep it
+% so figure-heavy pages do not stretch vertical space and shove
+% floats into awkward positions.
+\raggedbottom
 
 \begin{document}
 
@@ -525,15 +526,15 @@ chosen in the launcher, with the same attitude quaternion driving
 the 3-D model. Fig.~\ref{fig:cesium} shows the bridge in operation
 over Bengaluru.
 
-\begin{figure}[!htbp]
+\begin{figure*}[!htbp]
 \centering
-\includegraphics[width=0.9\columnwidth]{fig17_cesium_globe.png}
+\includegraphics[width=0.75\textwidth]{fig17_cesium_globe.png}
 \caption{Live CesiumJS view of the simulator over Bengaluru
 (12.97\,N, 77.59\,E, 920\,m AMSL). The HUD overlay shows the same
 state vector that drives the dynamics, transmitted at 25\,Hz from
 MATLAB through a Python HTTP bridge.}
 \label{fig:cesium}
-\end{figure}
+\end{figure*}
 
 %==============================================================
 \section{Experimental Validation}\label{sec:exp}

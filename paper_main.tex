@@ -1,5 +1,5 @@
-﻿%==============================================================
-% IEEE Conference Template (a4paper) â€” Pastable single file
+%==============================================================
+% IEEE Conference Template (a4paper) — Pastable single file
 % Drone simulation paper
 %==============================================================
 \documentclass[a4paper, conference]{IEEEtran}
@@ -22,14 +22,14 @@
 % Float-placement tuning. \section is deliberately NOT redefined to
 % call \FloatBarrier --- doing so on a figure-heavy paper causes
 % LaTeX to emit large blank pages. Figures are instead allowed to
-% float naturally with [!htbp] and a single \FloatBarrier is placed
+% float naturally with [!htb] and a single \FloatBarrier is placed
 % just before the bibliography.
 \renewcommand{\topfraction}{0.92}
 \renewcommand{\bottomfraction}{0.85}
 \renewcommand{\textfraction}{0.07}
-\renewcommand{\floatpagefraction}{0.75}
+\renewcommand{\floatpagefraction}{0.92}
 \renewcommand{\dbltopfraction}{0.92}
-\renewcommand{\dblfloatpagefraction}{0.75}
+\renewcommand{\dblfloatpagefraction}{0.92}
 \setcounter{topnumber}{3}
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{4}
@@ -204,7 +204,7 @@ enforced by a single deterministic scheduler implemented in
 \texttt{run\_simulation.m}.
 Fig.~\ref{fig:pipeline} depicts the data flow.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.95\textwidth]{fig18_pipeline_overview.png}
 \caption{End-to-end simulation pipeline. Top row: deterministic
@@ -224,7 +224,7 @@ parameters, motor layout (positions and spin directions), aerodynamic
 coefficients, and pre-tuned PID gains. Five built-in presets are
 shipped:
 
-\begin{table}[!htbp]
+\begin{table}[!htb]
 \centering
 \caption{Built-in airframe presets}
 \label{tab:presets}
@@ -247,7 +247,7 @@ shown in Fig.~\ref{fig:dronemodels}. The same low-level renderer
 (\texttt{drone\_3d\_plot.m}) is used by both the live simulator and
 the post-flight replay.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.85\textwidth]{fig15_drone_3d_models.png}
 \caption{3-D rigid-body renderings of the five built-in airframe
@@ -436,7 +436,7 @@ latitude/longitude/altitude), pick a flight mode (manual or auto-
 stabilised), and toggle wind, traffic, online map tiles, and the
 precise battery model before launching the simulator.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.65\textwidth]{fig14_launcher_ui.png}
 \caption{Pre-flight setup UI of the simulator. The user picks a
@@ -447,7 +447,7 @@ flight mode, and environmental options before pressing FLY.}
 
 \subsection{Live telemetry dashboard}
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \begin{subfigure}[t]{0.7\textwidth}
   \centering
@@ -482,7 +482,7 @@ progress.
 
 \subsection{Animated 3-D replay}
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
@@ -527,7 +527,7 @@ chosen in the launcher, with the same attitude quaternion driving
 the 3-D model. Fig.~\ref{fig:cesium} shows the bridge in operation
 over Bengaluru.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.75\textwidth]{fig17_cesium_globe.png}
 \caption{Live CesiumJS view of the simulator over Bengaluru
@@ -549,7 +549,7 @@ controller holds the drone within $\pm$8\,cm horizontal and
 $\pm$4\,cm vertical of the set-point. Fig.~\ref{fig:hover}
 summarises the six-panel diagnostic.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.95\textwidth]{fig1_hover_stability.png}
 \caption{Hover stability for the \texttt{standard\_quad} preset
@@ -564,7 +564,7 @@ Fig.~\ref{fig:waypoint} shows the ground track and altitude profile.
 
 \subsection{Wind rejection}
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
@@ -604,7 +604,7 @@ temperature feeds back into $R_m(T_m)$ inside the BLDC model so that
 sustained high-throttle commands are reflected as a measurable
 reduction in mechanical efficiency rather than as silent over-power.
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
@@ -629,7 +629,7 @@ from the same 60\,s mission log.}
 \label{fig:state}
 \end{figure*}
 
-\begin{figure*}[!htbp]
+\begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering

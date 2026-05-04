@@ -38,6 +38,13 @@
 % so figure-heavy pages do not stretch vertical space and shove
 % floats into awkward positions.
 \raggedbottom
+% Allow loose word-spacing rather than letting long tokens (file
+% paths, URLs, identifiers with underscores) overshoot the narrow
+% IEEE column. Combined with \path{} this prevents column overlap.
+\tolerance=2000
+\emergencystretch=3em
+\hyphenpenalty=200
+\exhyphenpenalty=200
 
 \begin{document}
 
@@ -541,7 +548,7 @@ MATLAB through a Python HTTP bridge.}
 \section{Experimental Validation}\label{sec:exp}
 All results are reproduced by the released script
 \texttt{generate\_paper\_figures.m}, which loads the saved log
-\texttt{flight\_logs/2026-04-13\_15-44-54\_quad\_x\_4M.mat}.
+\path{flight_logs/2026-04-13_15-44-54_quad_x_4M.mat}.
 
 \subsection{Hover stability}
 With the \texttt{standard\_quad} preset and zero wind, the

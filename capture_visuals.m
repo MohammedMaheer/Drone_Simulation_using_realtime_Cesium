@@ -27,6 +27,63 @@ function capture_visuals()
         fh = findall(0, 'Type','figure', '-regexp', 'Name', 'Pre-Flight Setup');
         if ~isempty(fh)
             fh = fh(1);
+            % --- Recolor launcher to a light theme so the screenshot
+            %     reads well on a printed page (fixes reviewer comment
+            %     'Background should be light, the text is not visible').
+            try
+                light_bg     = [0.97 0.97 0.98];
+                light_panel  = [0.92 0.93 0.95];
+                light_edit   = [1.00 1.00 1.00];
+                light_text   = [0.10 0.10 0.12];
+                light_dim    = [0.30 0.30 0.34];
+                set(fh, 'Color', light_bg);
+                kids = findall(fh);
+                for kk = 1:numel(kids)
+                    h = kids(kk);
+                    try
+                        switch lower(get(h,'Type'))
+                            case 'uipanel'
+                                set(h, 'BackgroundColor', light_panel, ...
+                                       'ForegroundColor', light_text, ...
+                                       'HighlightColor', [0.7 0.7 0.75], ...
+                                       'ShadowColor',    [0.6 0.6 0.65]);
+                                if isprop(h,'TitleColor')
+                                    set(h,'TitleColor', light_text);
+                                end
+                            case 'uicontrol'
+                                style = lower(get(h,'Style'));
+                                if any(strcmp(style, {'edit','popupmenu','listbox'}))
+                                    set(h, 'BackgroundColor', light_edit, ...
+                                           'ForegroundColor', light_text);
+                                elseif strcmp(style, 'pushbutton')
+                                    bc = get(h,'BackgroundColor');
+                                    % keep colored buttons (e.g. green FLY)
+                                    if all(abs(bc - [0.22 0.22 0.26]) < 0.05) || ...
+                                       all(abs(bc - [0.16 0.16 0.19]) < 0.05) || ...
+                                       all(abs(bc - [0.12 0.12 0.14]) < 0.05)
+                                        set(h, 'BackgroundColor', light_panel, ...
+                                               'ForegroundColor', light_text);
+                                    end
+                                elseif any(strcmp(style, {'text','checkbox','radiobutton','togglebutton','slider'}))
+                                    set(h, 'BackgroundColor', light_panel, ...
+                                           'ForegroundColor', light_text);
+                                end
+                            case 'axes'
+                                set(h, 'Color', light_bg, ...
+                                       'XColor', light_text, ...
+                                       'YColor', light_text, ...
+                                       'ZColor', light_text);
+                            case 'text'
+                                if isprop(h,'Color'); set(h,'Color', light_text); end
+                        end
+                    catch
+                        % some handles don't support these properties
+                    end
+                end
+                drawnow; pause(0.2); drawnow;
+            catch ME_theme
+                fprintf('  [warn] launcher light-theme recolor failed: %s\n', ME_theme.message);
+            end
             try
                 frame = getframe(fh);
                 imwrite(frame.cdata, fullfile(out_dir,'fig14_launcher_ui.png'));
@@ -48,7 +105,21 @@ function capture_visuals()
     titles  = {'Micro Tri (180 mm)','Mini Quad (250 mm)', ...
                'Standard Quad (450 mm)','Heavy Hex (680 mm)', ...
                'Octo Lifter (1000 mm)'};
-    fh = figure('Color','w','Position',[80 80 1500 380]);
+
+    % Precompute the largest arm length so every subplot uses an
+    % identical bounding box and the five renderings appear at
+    % equal physical size (fix for reviewer comment 'make it bigger,
+    % all equal sizes').
+    L_all = zeros(1,numel(presets));
+    for k = 1:numel(presets)
+        cfg_k = drone_config(presets{k});
+        L_all(k) = cfg_k.drone.arm_length;
+    end
+    L_max = max(L_all);
+    box_xy = 1.6 * L_max;          % half-extent in X and Y
+    box_z  = 0.45 * L_max;         % half-extent in Z
+
+    fh = figure('Color','w','Position',[60 60 1700 460]);
     tl = tiledlayout(fh,1,5,'TileSpacing','compact','Padding','compact');
     for k = 1:numel(presets)
         cfg = drone_config(presets{k});
@@ -57,17 +128,23 @@ function capture_visuals()
         drone_3d_plot([0;0;0], [0;0;0], L, ax, cfg.motor_layout, ...
                       ones(cfg.drone.num_motors,1)*cfg.drone.hover_omega, 0);
         view(ax, 35, 25);
-        axis(ax, 'equal'); axis(ax, 'vis3d'); grid(ax,'on'); box(ax,'on');
+        % Common bounding box -> all drones rendered at the same
+        % subplot size, with the relative scale of the airframes
+        % preserved.
+        axis(ax, 'vis3d'); grid(ax,'on'); box(ax,'on');
         camlight(ax,'headlight'); lighting(ax,'gouraud');
-        xlim(ax, 1.4*[-L L]); ylim(ax, 1.4*[-L L]); zlim(ax, [-0.3 0.3]*L);
-        title(ax, titles{k}, 'Color','k','FontWeight','bold');
+        xlim(ax, [-box_xy  box_xy]);
+        ylim(ax, [-box_xy  box_xy]);
+        zlim(ax, [-box_z   box_z]);
+        daspect(ax, [1 1 1]);
+        title(ax, titles{k}, 'Color','k','FontWeight','bold','FontSize',12);
         set(ax,'XColor','k','YColor','k','ZColor','k','Color','w');
         xlabel(ax,'X [m]'); ylabel(ax,'Y [m]'); zlabel(ax,'Z [m]');
     end
     title(tl,'3-D Rigid-Body Renders of the Five Built-in Airframe Presets', ...
-          'FontWeight','bold','Color','k');
+          'FontWeight','bold','Color','k','FontSize',14);
     exportgraphics(fh, fullfile(out_dir,'fig15_drone_3d_models.png'), ...
-        'Resolution', 220, 'BackgroundColor','white');
+        'Resolution', 240, 'BackgroundColor','white');
     fprintf('  wrote fig15_drone_3d_models.png\n');
     close(fh);
 

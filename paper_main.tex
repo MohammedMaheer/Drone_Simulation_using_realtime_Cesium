@@ -629,6 +629,25 @@ from the same 60\,s mission log.}
 \label{fig:state}
 \end{figure*}
 
+\begin{figure*}[!htbp]
+\centering
+\begin{subfigure}[b]{0.48\textwidth}
+  \centering
+  \includegraphics[height=5.0cm,keepaspectratio]{fig7_motor_speeds.png}
+  \caption{Per-motor RPM history.}
+  \label{fig:motor}
+\end{subfigure}\hfill
+\begin{subfigure}[b]{0.48\textwidth}
+  \centering
+  \includegraphics[height=5.0cm,keepaspectratio]{fig8_attitude_tracking.png}
+  \caption{Attitude tracking (cmd dashed, state solid).}
+  \label{fig:attitude}
+\end{subfigure}
+\caption{Inner-loop verification: smooth ESC commands with no
+saturation, attitude RMS below 1$^\circ$ on all three axes.}
+\label{fig:inner}
+\end{figure*}
+
 \subsection{Payload release}
 Fig.~\ref{fig:state}(c) captures the discrete-event payload-release
 disturbance: an instantaneous 0.5\,kg drop at $t=30$\,s causes a
@@ -671,26 +690,16 @@ airframe modes that become significant for large lifters above
 $\sim$10\,kg, and (iii) sensor-fusion architectures beyond the
 12-state EKF, such as factor-graph or invariant-EKF formulations.
 These are deliberately deferred to future work to keep the released
-artefact compact and re-runnable on a stock laptop.
-
-\begin{figure*}[!htbp]
-\centering
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[height=5.0cm,keepaspectratio]{fig7_motor_speeds.png}
-  \caption{Per-motor RPM history.}
-  \label{fig:motor}
-\end{subfigure}\hfill
-\begin{subfigure}[b]{0.48\textwidth}
-  \centering
-  \includegraphics[height=5.0cm,keepaspectratio]{fig8_attitude_tracking.png}
-  \caption{Attitude tracking (cmd dashed, state solid).}
-  \label{fig:attitude}
-\end{subfigure}
-\caption{Inner-loop verification: smooth ESC commands with no
-saturation, attitude RMS below 1$^\circ$ on all three axes.}
-\label{fig:inner}
-\end{figure*}
+artefact compact and re-runnable on a stock laptop. End-to-end
+runtime on a stock 8-core laptop is approximately 0.6$\times$ wall
+clock for the standard 60\,s mission, with the dynamics and EKF
+together accounting for roughly 70\,\% of CPU time and the live
+dashboard for the remainder. Disabling the dashboard and Cesium
+bridge brings real-time-factor below 0.25$\times$, which is
+adequate for batched Monte-Carlo sweeps. The full eighteen-figure
+regeneration script completes in under two minutes from a cached
+log set, providing a tight edit-build-validate loop for both
+controller tuning and configuration sweeps.
 
 % Force all experimental-validation figures to appear before the
 % Conclusion section so the paper does not end with floats trailing

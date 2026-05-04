@@ -85,11 +85,31 @@ function capture_visuals()
                 fprintf('  [warn] launcher light-theme recolor failed: %s\n', ME_theme.message);
             end
             try
+                % Capture launcher at native size (uipanels use absolute
+                % pixel positions, so resizing the window leaves white
+                % margins). Auto-crop trailing white margins after
+                % capture so the PNG is tight to the UI content.
+                drawnow; pause(0.4); drawnow;
                 frame = getframe(fh);
-                imwrite(frame.cdata, fullfile(out_dir,'fig14_launcher_ui.png'));
+                img = frame.cdata;
+                % Auto-crop white/near-white border rows and columns.
+                bg_mask = all(img > 240, 3);
+                row_blank = all(bg_mask, 2);
+                col_blank = all(bg_mask, 1);
+                r_keep = find(~row_blank);
+                c_keep = find(~col_blank);
+                if ~isempty(r_keep) && ~isempty(c_keep)
+                    pad = 12;
+                    r1 = max(1, r_keep(1) - pad);
+                    r2 = min(size(img,1), r_keep(end) + pad);
+                    c1 = max(1, c_keep(1) - pad);
+                    c2 = min(size(img,2), c_keep(end) + pad);
+                    img = img(r1:r2, c1:c2, :);
+                end
+                imwrite(img, fullfile(out_dir,'fig14_launcher_ui.png'));
             catch
                 exportgraphics(fh, fullfile(out_dir,'fig14_launcher_ui.png'), ...
-                    'Resolution', 200);
+                    'Resolution', 300, 'BackgroundColor','white');
             end
             fprintf('  wrote fig14_launcher_ui.png\n');
             delete(fh);
@@ -152,7 +172,7 @@ function capture_visuals()
     title(tl,'3-D Rigid-Body Renders of the Five Built-in Airframe Presets', ...
           'FontWeight','bold','Color','k','FontSize',16);
     exportgraphics(fh, fullfile(out_dir,'fig15_drone_3d_models.png'), ...
-        'Resolution', 240, 'BackgroundColor','white');
+        'Resolution', 300, 'BackgroundColor','white');
     fprintf('  wrote fig15_drone_3d_models.png\n');
     close(fh);
 
@@ -236,7 +256,7 @@ function capture_visuals()
     title(ax_info,'Telemetry Overlay','Color','k','FontWeight','bold');
     drawnow;
     exportgraphics(fh, fullfile(out_dir,'fig16_anim_3d_inflight.png'), ...
-        'Resolution', 220, 'BackgroundColor','white');
+        'Resolution', 300, 'BackgroundColor','white');
     fprintf('  wrote fig16_anim_3d_inflight.png\n');
     close(fh);
 
@@ -297,7 +317,7 @@ function cesium_placeholder(out_dir)
          'Real Earth terrain (Cesium Ion), live drone pose @ 25 Hz, ECEF transform, attitude quaternion.'], ...
         'FontName','Consolas','Color',[0.15 0.15 0.15],'FontSize',10);
     xlim(ax,[0 1]); ylim(ax,[0 1]);
-    exportgraphics(fh, target, 'Resolution', 220, 'BackgroundColor','white');
+    exportgraphics(fh, target, 'Resolution', 300, 'BackgroundColor','white');
     fprintf('  wrote fig17_cesium_globe.png  (synthetic placeholder)\n');
     close(fh);
 end
@@ -405,7 +425,7 @@ function pipeline_diagram(out_dir)
 
     drawnow;
     exportgraphics(fh, fullfile(out_dir,'fig18_pipeline_overview.png'), ...
-        'Resolution', 220, 'BackgroundColor','white');
+        'Resolution', 300, 'BackgroundColor','white');
     fprintf('  wrote fig18_pipeline_overview.png\n');
     close(fh);
 end

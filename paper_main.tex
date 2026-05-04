@@ -24,14 +24,19 @@
 % LaTeX to emit large blank pages. Figures are instead allowed to
 % float naturally with [!htbp] and a single \FloatBarrier is placed
 % just before the bibliography.
-\renewcommand{\topfraction}{0.95}
-\renewcommand{\bottomfraction}{0.92}
-\renewcommand{\textfraction}{0.05}
-\renewcommand{\floatpagefraction}{0.65}
+\renewcommand{\topfraction}{0.97}
+\renewcommand{\bottomfraction}{0.95}
+\renewcommand{\textfraction}{0.04}
+\renewcommand{\floatpagefraction}{0.85}
+\renewcommand{\dbltopfraction}{0.97}
+\renewcommand{\dblfloatpagefraction}{0.85}
 \setcounter{topnumber}{4}
 \setcounter{bottomnumber}{4}
 \setcounter{totalnumber}{8}
-\raggedbottom
+\setcounter{dbltopnumber}{4}
+% Use \flushbottom so LaTeX vertically justifies pages, eliminating
+% the trailing blank space at the bottom of figure-heavy pages.
+\flushbottom
 
 \begin{document}
 

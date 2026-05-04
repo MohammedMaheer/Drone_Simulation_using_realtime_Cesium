@@ -35,8 +35,7 @@
 
 \begin{document}
 
-\title{A Reproducible MATLAB Simulation Framework for High-Fidelity, Configurable Multirotor Aerial Vehicles\\
-{\footnotesize Open-Source N-Motor Multirotor Simulator with Cascaded Control, EKF Estimation, MIL-DTL-9490E Wind, BEMT Propulsion and CesiumJS Geo-Visualisation}
+\title{A Reproducible MATLAB Simulation Framework for High-Fidelity, Configurable Multirotor Aerial Vehicles
 \thanks{Source code, configurations and reproduction scripts are released as an open repository at \url{https://github.com/MohammedMaheer/Drone_Simulation_using_realtime_Cesium}~\cite{repo}.}
 }
 
@@ -92,12 +91,24 @@ thermal model, CesiumJS, reproducible research
 
 %==============================================================
 \section{Introduction}
-\IEEEPARstart{T}{he} pedagogical and prototyping value of a
+\IEEEPARstart{U}{nmanned} multirotor aerial vehicles have become
+indispensable across industrial, defence, commercial, and research
+domains~\cite{rotors2016}. As mission requirements grow increasingly
+complex --- diverse airframe topologies, heavier payloads, longer
+endurance and robust disturbance rejection in cluttered or windy
+environments --- the reliance on empirical, trial-and-error physical
+prototyping has become prohibitively expensive, slow and risky. A
+high-fidelity, fully scripted simulator that captures the rotor,
+sensor, environment and energy subsystems with sufficient realism
+is therefore now a prerequisite both for early-stage design space
+exploration and for safe controller development.
+
+The pedagogical and prototyping value of such a
 high-fidelity, fully scripted multirotor simulator is now well
 established. Industry-grade stacks such as PX4 SITL, ArduPilot SITL,
 Gazebo/RotorS, jMAVSim and AirSim provide excellent fidelity but bind
-the user to specific autopilot ecosystems, ROS toolchains, or game-
-engine renderers --- making it difficult to inspect intermediate
+the user to specific autopilot ecosystems, ROS toolchains, or
+game-engine renderers --- making it difficult to inspect intermediate
 quantities (rotor torque, battery internal resistance, sensor
 latency), to swap out individual subsystems, or to drive a
 publication-quality figure deterministically from a saved log.
@@ -108,6 +119,22 @@ silently disqualifies them as a starting point for studying
 tricopters, hexacopters, octocopters, payload mechanics, ground
 effect, propeller vibration, motor saturation, or battery thermal
 runaway.
+
+\subsection{Related work}\label{sec:related}
+Open-source simulators include jMAVSim and Gazebo/RotorS
+\cite{ros2014}, which target the PX4 stack and require ROS, and
+AirSim \cite{airsim2017}, which provides photo-real rendering through
+Unreal Engine but binds the user to a C++/Python toolchain. RotorS
+\cite{rotors2016} contributes multirotor models including hex- and
+octo- frames but inherits the Gazebo overhead. None of these expose,
+in a single self-contained script, the combination of (i) an
+arbitrary-$N$ multirotor mixer, (ii) a BEMT propeller with
+measured-curve fallback, (iii) lumped-parameter battery thermal
+dynamics, (iv) Cheeseman--Bennett ground effect, (v) MIL-DTL-9490E
+Dryden turbulence with altitude-scaled intensity, and (vi) a 12-state
+EKF with realistic sensor pathologies. The framework reported here
+closes that gap and remains a single-language, single-process, fully
+scripted artefact.
 
 This paper describes a third path: a single-language,
 purely MATLAB framework that (i) supports an arbitrary number of
@@ -144,7 +171,6 @@ The principal contributions are:
 \end{itemize}
 
 \subsection{Paper organisation}
-Section~\ref{sec:related} reviews open-source simulators.
 Section~\ref{sec:arch} introduces the eight orthogonal modules of the
 framework. Section~\ref{sec:dyn} derives the rigid-body dynamics.
 Section~\ref{sec:prop} describes the propulsion stack.
@@ -156,22 +182,6 @@ dashboard, animated replay, Cesium globe).
 Section~\ref{sec:exp} reports experimental results from a 60\,s
 square mission and stress-tests.
 Section~\ref{sec:conc} concludes.
-
-%==============================================================
-\section{Related Work}\label{sec:related}
-Open-source simulators include jMAVSim and Gazebo/RotorS \cite{ros2014},
-which target the PX4 stack and require ROS, and AirSim \cite{airsim2017},
-which provides photo-real rendering through Unreal Engine but binds
-the user to a C++/Python toolchain. RotorS \cite{rotors2016} contributes
-multirotor models including hex- and octo- frames but inherits the
-Gazebo overhead. None of these expose, in a single self-contained
-script, the combination of (i) an arbitrary-$N$ multirotor mixer,
-(ii) a BEMT propeller with measured-curve fallback, (iii) lumped-
-parameter battery thermal dynamics, (iv) Cheeseman--Bennett ground
-effect, (v) MIL-DTL-9490E Dryden turbulence with altitude-scaled
-intensity, and (vi) a 12-state EKF with realistic sensor pathologies.
-The framework reported here closes that gap and remains a
-single-language, single-process, fully scripted artefact.
 
 %==============================================================
 \section{System Architecture}\label{sec:arch}
@@ -580,8 +590,6 @@ from the lumped equivalent-circuit battery model~\cite{plett}. Average
 hover power matches the analytical estimate (216\,W at 1.5\,kg)
 within 1.5\,\%.
 
-\subsection{Payload release}
-
 \begin{figure*}[!t]
 \centering
 \begin{subfigure}[t]{0.32\textwidth}
@@ -607,10 +615,16 @@ from the same 60\,s mission log.}
 \label{fig:state}
 \end{figure*}
 
+\subsection{Payload release}
 Fig.~\ref{fig:state}(c) captures the discrete-event payload-release
 disturbance: an instantaneous 0.5\,kg drop at $t=30$\,s causes a
 $\Delta\theta \!\approx\! 5^\circ$ pitch transient that the
 attitude loop rejects in $\sim$0.4\,s.
+
+\subsection{Motor speeds and attitude tracking}
+Fig.~\ref{fig:inner} verifies the inner loops. Motor RPMs are smooth
+(no commutation chatter from the ESC lag), and the attitude reference
+is tracked with $<$1$^\circ$ RMS.
 
 \begin{figure*}[!t]
 \centering
@@ -630,12 +644,6 @@ attitude loop rejects in $\sim$0.4\,s.
 saturation, attitude RMS below 1$^\circ$ on all three axes.}
 \label{fig:inner}
 \end{figure*}
-
-\subsection{Motor speeds and attitude tracking}
-
-Fig.~\ref{fig:inner} verifies the inner loops. Motor RPMs are smooth
-(no commutation chatter from the ESC lag), and the attitude reference
-is tracked with $<$1$^\circ$ RMS.
 
 % Force all experimental-validation figures to appear before the
 % Conclusion section so the paper does not end with floats trailing

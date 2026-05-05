@@ -139,14 +139,17 @@ function capture_visuals()
     box_xy = 1.6 * L_max;          % half-extent in X and Y
     box_z  = 0.45 * L_max;         % half-extent in Z
 
-    % 2 rows x 3 cols layout (one slot left empty) yields a near-square
-    % aspect so each subplot is rendered at much higher visual resolution
-    % when the figure is fit to the IEEE column width in LaTeX.
+    % 2 rows of tiles arranged so the bottom row (2 drones) is
+    % horizontally centred under the top row (3 drones), with no
+    % empty/blank tile slot in the rendered PNG. Implemented as a
+    % 2x6 grid where each subplot spans two columns; the bottom row
+    % is shifted by one column so the two drones sit centred.
     fh = figure('Color','w','Position',[60 60 1500 1000]);
-    tl = tiledlayout(fh,2,3,'TileSpacing','compact','Padding','compact');
+    tl = tiledlayout(fh,2,6,'TileSpacing','compact','Padding','compact');
+    tile_starts = [1 3 5 8 10];   % start tile index for each preset
     for k = 1:numel(presets)
         cfg = drone_config(presets{k});
-        ax  = nexttile;
+        ax  = nexttile(tl, tile_starts(k), [1 2]);
         L   = cfg.drone.arm_length;
         drone_3d_plot([0;0;0], [0;0;0], L, ax, cfg.motor_layout, ...
                       ones(cfg.drone.num_motors,1)*cfg.drone.hover_omega, 0);
@@ -165,10 +168,6 @@ function capture_visuals()
                'FontSize',11);
         xlabel(ax,'X [m]'); ylabel(ax,'Y [m]'); zlabel(ax,'Z [m]');
     end
-    % Hide the unused 6th tile (2x3 grid, 5 presets) so it does not
-    % render as an empty axis.
-    ax_empty = nexttile;
-    set(ax_empty,'Visible','off');
     title(tl,'3-D Rigid-Body Renders of the Five Built-in Airframe Presets', ...
           'FontWeight','bold','Color','k','FontSize',16);
     exportgraphics(fh, fullfile(out_dir,'fig15_drone_3d_models.png'), ...

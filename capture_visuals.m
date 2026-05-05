@@ -144,7 +144,7 @@ function capture_visuals()
     % empty/blank tile slot in the rendered PNG. Implemented as a
     % 2x6 grid where each subplot spans two columns; the bottom row
     % is shifted by one column so the two drones sit centred.
-    fh = figure('Color','w','Position',[60 60 1500 650]);
+    fh = figure('Color','w','Position',[60 60 1800 720]);
     tl = tiledlayout(fh,2,6,'TileSpacing','tight','Padding','tight');
     tile_starts = [1 3 5 8 10];   % start tile index for each preset
     for k = 1:numel(presets)
@@ -154,14 +154,16 @@ function capture_visuals()
         drone_3d_plot([0;0;0], [0;0;0], L, ax, cfg.motor_layout, ...
                       ones(cfg.drone.num_motors,1)*cfg.drone.hover_omega, 0);
         view(ax, 35, 25);
-        % Use a common bounding box across subplots so the relative
-        % size of the airframes is preserved, but let each axes fill
-        % its tile to avoid blank vertical strips.
+        % Per-drone bounding box so the small airframes do not get
+        % lost in a huge whitespace cube. Relative scale across
+        % presets is communicated by the (mm) labels in the titles.
+        bx = 1.55 * L;
+        bz = 0.50 * L;
         grid(ax,'on'); box(ax,'on');
         camlight(ax,'headlight'); lighting(ax,'gouraud');
-        xlim(ax, [-box_xy  box_xy]);
-        ylim(ax, [-box_xy  box_xy]);
-        zlim(ax, [-box_z   box_z]);
+        xlim(ax, [-bx  bx]);
+        ylim(ax, [-bx  bx]);
+        zlim(ax, [-bz  bz]);
         title(ax, titles{k}, 'Color','k','FontWeight','bold','FontSize',14);
         set(ax,'XColor','k','YColor','k','ZColor','k','Color','w', ...
                'FontSize',11);

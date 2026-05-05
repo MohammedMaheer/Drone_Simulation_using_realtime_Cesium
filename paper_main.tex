@@ -15,6 +15,7 @@
 \usepackage{url}
 \usepackage{placeins}
 \usepackage{subcaption}
+\captionsetup{skip=2pt}
 \usepackage[hidelinks]{hyperref}
 
 \graphicspath{{paper_figures/}{./paper_figures/}}
@@ -34,11 +35,14 @@
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{4}
 \setcounter{dbltopnumber}{3}
-% Use \flushbottom so the typesetter stretches inter-paragraph and
-% inter-section glue to fill the page exactly to the bottom margin.
-% Without this, IEEEtran conference defaults to \raggedbottom,
-% which leaves visible whitespace at the foot of figure-heavy pages.
-\flushbottom
+% Tight float spacing to keep the document at the IEEE 8-page limit.
+\setlength{\textfloatsep}{4pt plus 1pt minus 1pt}
+\setlength{\floatsep}{4pt plus 1pt minus 1pt}
+\setlength{\intextsep}{4pt plus 1pt minus 1pt}
+\setlength{\dbltextfloatsep}{4pt plus 1pt minus 1pt}
+\setlength{\dblfloatsep}{4pt plus 1pt minus 1pt}
+\captionsetup[subfigure]{skip=2pt}
+\raggedbottom
 % Allow loose word-spacing rather than letting long tokens (file
 % paths, URLs, identifiers with underscores) overshoot the narrow
 % IEEE column. Combined with \path{} this prevents column overlap.
@@ -212,7 +216,7 @@ Fig.~\ref{fig:pipeline} depicts the data flow.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.95\textwidth]{fig18_pipeline_overview.png}
+\includegraphics[width=0.82\textwidth]{fig18_pipeline_overview.png}
 \caption{End-to-end simulation pipeline. Top row: deterministic
 forward path at 1\,kHz physics rate. Middle row: feedback path
 through environment, sensors, and 12-state EKF. Bottom row:
@@ -256,7 +260,7 @@ the post-flight replay.
 \FloatBarrier
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.98\textwidth]{fig15_drone_3d_models.png}
+\includegraphics[width=0.86\textwidth]{fig15_drone_3d_models.png}
 \caption{3-D rigid-body renderings of the five built-in airframe
 presets, drawn from the same configuration structs that drive the
 dynamics. From left to right: \texttt{micro\_tri} (180\,mm),
@@ -445,7 +449,7 @@ precise battery model before launching the simulator.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.65\textwidth]{fig14_launcher_ui.png}
+\includegraphics[width=0.52\textwidth]{fig14_launcher_ui.png}
 \caption{Pre-flight setup UI of the simulator. The user picks a
 preset (or fully custom airframe), a real-world location, the
 flight mode, and environmental options before pressing FLY.}
@@ -493,17 +497,17 @@ progress.
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.4cm,keepaspectratio]{fig16_anim_3d_inflight.png}
+  \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{fig16_anim_3d_inflight.png}
   \caption{Animated 3-D replay frame.}
   \label{fig:anim}
 \end{subfigure}\hfill
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.4cm,keepaspectratio]{fig13_3d_trajectory.png}
+  \includegraphics[width=\linewidth,height=4.2cm,keepaspectratio]{fig13_3d_trajectory.png}
   \caption{3-D mission trajectory.}
   \label{fig:traj3d}
-\end{subfigure}\\[8pt]
-\begin{subfigure}[b]{0.6\textwidth}
+\end{subfigure}\\[3pt]
+\begin{subfigure}[b]{0.5\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig12_post_flight_overview.png}
   \caption{Six-panel post-flight summary.}
@@ -536,7 +540,7 @@ over Bengaluru.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.75\textwidth]{fig17_cesium_globe.png}
+\includegraphics[width=0.62\textwidth]{fig17_cesium_globe.png}
 \caption{Live CesiumJS view of the simulator over Bengaluru
 (12.97\,N, 77.59\,E, 920\,m AMSL). The HUD overlay shows the same
 state vector that drives the dynamics, transmitted at 25\,Hz from
@@ -554,24 +558,18 @@ All results are reproduced by the released script
 With the \texttt{standard\_quad} preset and zero wind, the
 controller holds the drone within $\pm$8\,cm horizontal and
 $\pm$4\,cm vertical of the set-point. Fig.~\ref{fig:hover}
-summarises the six-panel diagnostic. The position trace shows a
-bounded random walk dominated by the GPS innovation noise rather
-than by any controller bias; the velocity panel confirms zero mean
-residual drift. Body angular rates remain below 5\,$^\circ$/s
-throughout the run, and the four-motor RPM band stays within a
-$\pm$3\,\% spread, indicating that the mixer is not fighting
-asymmetric thrust. The battery state-of-charge falls almost
-linearly because the airframe sits well clear of the high-current
-knee of the discharge curve, and total power tracks the analytic
-hover estimate to within 1.5\,\%. Repeating the experiment with
-the \texttt{mini\_quad} and \texttt{heavy\_hex} presets yields
-the same qualitative shape but scaled by mass and disc loading,
-confirming that the auto-tuner produces consistent gains across
-the airframe envelope without any manual intervention.
+summarises the six-panel diagnostic. Position trace is a bounded
+random walk dominated by GPS innovation noise; body angular rates
+remain below 5\,$^\circ$/s, and the four-motor RPM band stays within
+$\pm$3\,\% spread. Battery SOC falls almost linearly and total power
+tracks the analytic hover estimate to within 1.5\,\%. Repeating with
+\texttt{mini\_quad} and \texttt{heavy\_hex} presets yields the same
+qualitative shape scaled by mass and disc loading, confirming the
+auto-tuner produces consistent gains across the airframe envelope.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.95\textwidth]{fig1_hover_stability.png}
+\includegraphics[width=0.82\textwidth]{fig1_hover_stability.png}
 \caption{Hover stability for the \texttt{standard\_quad} preset
 (no wind). Position, velocity, attitude, motor RPMs, total power,
 and battery SOC are shown in a single tiled plot.}
@@ -595,40 +593,30 @@ Repeating the same mission under a steady 8\,m/s wind plus Dryden
 turbulence triples the cross-track error but the drone still
 completes the pattern (Fig.~\ref{fig:wind}). The mean radial
 deviation rises from 0.6\,m to 1.9\,m, with peak excursions of
-2.4\,m on the upwind legs where the integrator has to overcome the
-steady component before the position loop can re-centre the track.
-Altitude regulation degrades more gracefully: the barometer-aided
-EKF holds the cruise height within $\pm$0.4\,m even at the worst-
-case turbulence intensity, because the vertical channel is dominated
-by thrust authority rather than by horizontal disturbance rejection.
-The Dryden filter contributes a broadband component centred near
-3\,Hz that is visible as a small high-frequency ripple on the
-attitude trace, while the deterministic gust overlay produces the
-characteristic low-frequency body-axis sway. Mission completion
-time grows by roughly 4\,\% as the controller trades forward speed
-for tracking accuracy at each corner, but no waypoint is missed and
-no motor saturates the configured thrust ceiling, confirming that
-the propulsion stack retains adequate headroom under the rated wind
-envelope. The same wind preset has been re-run on
-\texttt{mini\_quad} and \texttt{heavy\_hex} airframes; the lighter
-quad shows roughly 1.6$\times$ the radial deviation of the
-standard frame because of its lower disc loading, whereas the
-hexacopter benefits from one extra rotor pair and tracks within
-1.4\,m even at the worst gust phase, illustrating how the
-arbitrary-$N$ mixer transparently scales the disturbance-rejection
-budget across the airframe envelope.
+2.4\,m on the upwind legs. Altitude regulation degrades more
+gracefully: the barometer-aided EKF holds the cruise height within
+$\pm$0.4\,m even at the worst-case turbulence intensity. The Dryden
+filter contributes a broadband component centred near 3\,Hz visible
+as attitude ripple, while the deterministic gust overlay produces
+the characteristic low-frequency body-axis sway. Mission completion
+time grows by roughly 4\,\% and no motor saturates the configured
+thrust ceiling. Re-running on \texttt{mini\_quad} and
+\texttt{heavy\_hex} airframes yields 1.6$\times$ and 0.7$\times$ the
+radial deviation respectively, illustrating how the arbitrary-$N$
+mixer transparently scales the disturbance-rejection budget across
+the airframe envelope.
 
 \begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig2_waypoint_mission.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig2_waypoint_mission.png}
   \caption{No-wind 20\,m square mission; $<$2\,m radial deviation.}
   \label{fig:waypoint}
 \end{subfigure}\hfill
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig3_wind_rejection.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig3_wind_rejection.png}
   \caption{Same mission under 8\,m/s wind + Dryden turbulence.}
   \label{fig:wind}
 \end{subfigure}
@@ -644,31 +632,30 @@ covariance trace converges within 6\,s.
 \subsection{Battery and thermal model}
 Fig.~\ref{fig:state}(b) plots state-of-charge and total power, computed
 from the lumped equivalent-circuit battery model~\cite{plett}. Average
-hover power matches the analytical estimate (216\,W at 1.5\,kg)
-within 1.5\,\%. The lumped model resolves the open-circuit voltage
-$V_{oc}(\mathrm{SOC})$ as a piecewise polynomial fit, the ohmic drop
-$R_0 i$, and a single RC pair $(R_1, C_1)$ that captures the short-
-term relaxation transient. Coulomb counting is corrected by a
-slow voltage-feedback term to bound long-horizon drift. Winding
-temperature feeds back into $R_m(T_m)$ inside the BLDC model so that
-sustained high-throttle commands are reflected as a measurable
-reduction in mechanical efficiency rather than as silent over-power.
+hover power matches the analytical estimate (216\,W at 1.5\,kg) within
+1.5\,\%. The model resolves $V_{oc}(\mathrm{SOC})$ as a piecewise
+polynomial, the ohmic drop $R_0 i$, and a single RC pair
+$(R_1, C_1)$ for the relaxation transient. Coulomb counting is
+corrected by a slow voltage-feedback term to bound long-horizon
+drift. Winding temperature feeds back into $R_m(T_m)$ inside the BLDC
+model so that sustained high-throttle commands appear as a
+measurable reduction in mechanical efficiency.
 
 \begin{figure*}[!htb]
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig4_ekf_residuals.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig4_ekf_residuals.png}
   \caption{EKF position residuals.}
   \label{fig:ekf}
 \end{subfigure}\hfill
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig5_battery_thermal.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig5_battery_thermal.png}
   \caption{Battery SOC and total power.}
   \label{fig:batt}
-\end{subfigure}\\[8pt]
-\begin{subfigure}[b]{0.6\textwidth}
+\end{subfigure}\\[3pt]
+\begin{subfigure}[b]{0.5\textwidth}
   \centering
   \includegraphics[width=\linewidth]{fig6_payload_release.png}
   \caption{Payload-release transient.}
@@ -683,13 +670,13 @@ from the same 60\,s mission log.}
 \centering
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig7_motor_speeds.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig7_motor_speeds.png}
   \caption{Per-motor RPM history.}
   \label{fig:motor}
 \end{subfigure}\hfill
 \begin{subfigure}[b]{0.48\textwidth}
   \centering
-  \includegraphics[width=\linewidth,height=5.0cm,keepaspectratio]{fig8_attitude_tracking.png}
+  \includegraphics[width=\linewidth,height=4.0cm,keepaspectratio]{fig8_attitude_tracking.png}
   \caption{Attitude tracking (cmd dashed, state solid).}
   \label{fig:attitude}
 \end{subfigure}
@@ -715,41 +702,24 @@ tethered tasks, or release of a tow-line.
 \subsection{Motor speeds and attitude tracking}
 Fig.~\ref{fig:inner} verifies the inner loops. Motor RPMs are smooth
 (no commutation chatter from the ESC lag), and the attitude reference
-is tracked with $<$1$^\circ$ RMS. The four motor traces remain
-phase-coherent under steady hover and split cleanly into pairs during
-yaw transients, confirming that the mixer correctly distributes the
-yaw moment between counter-rotating rotor pairs. Peak rate-of-change
-of commanded speed stays below the configured slew limit
-($\dot\omega_{\max}=2500$\,rad/s$^2$), which empirically prevents
-ESC desynchronisation and bounds peak phase current to safe levels.
-The attitude error spectrum is dominated by the $\sim$3\,Hz
-Dryden turbulence component during windy missions; in still air the
-residual tracking error is essentially Gaussian and consistent with
-the IMU noise floor mapped through the attitude estimator gain.
+is tracked with $<$1$^\circ$ RMS. The four motor traces split cleanly
+into pairs during yaw transients, confirming correct distribution of
+the yaw moment. Peak commanded slew stays below
+$\dot\omega_{\max}=2500$\,rad/s$^2$, bounding peak phase current. In
+still air the residual tracking error is essentially Gaussian and
+consistent with the IMU noise floor mapped through the estimator gain.
 
 \subsection{Reproducibility and limitations}
-All figures in this paper are regenerated by
-\texttt{generate\_paper\_figures.m} from a single archived
-\texttt{.mat} log; the random-number seeds, configuration struct,
-and mission profile are persisted alongside the log so that any
-numerical claim can be re-derived deterministically. The framework
-remains a single-process MATLAB program and therefore does not yet
-cover three classes of effects: (i) aerodynamic interaction between
-closely spaced rotors and between vehicles in a swarm, (ii) flexible-
-airframe modes that become significant for large lifters above
-$\sim$10\,kg, and (iii) sensor-fusion architectures beyond the
-12-state EKF, such as factor-graph or invariant-EKF formulations.
-These are deliberately deferred to future work to keep the released
-artefact compact and re-runnable on a stock laptop. End-to-end
-runtime on a stock 8-core laptop is approximately 0.6$\times$ wall
-clock for the standard 60\,s mission, with the dynamics and EKF
-together accounting for roughly 70\,\% of CPU time and the live
-dashboard for the remainder. Disabling the dashboard and Cesium
-bridge brings real-time-factor below 0.25$\times$, which is
-adequate for batched Monte-Carlo sweeps. The full eighteen-figure
-regeneration script completes in under two minutes from a cached
-log set, providing a tight edit-build-validate loop for both
-controller tuning and configuration sweeps.
+All figures are regenerated by \texttt{generate\_paper\_figures.m}
+from a single archived \texttt{.mat} log; random seeds, configuration
+struct, and mission profile are persisted alongside the log. The
+framework is single-process MATLAB and does not yet cover (i)
+aerodynamic interaction between closely spaced rotors or swarms,
+(ii) flexible-airframe modes for lifters above $\sim$10\,kg, and
+(iii) sensor-fusion architectures beyond the 12-state EKF. End-to-
+end runtime is approximately 0.6$\times$ wall clock on a stock
+8-core laptop; disabling the dashboard and Cesium bridge brings
+real-time-factor below 0.25$\times$ for batched Monte-Carlo sweeps.
 
 % Force all experimental-validation figures to appear before the
 % Conclusion section so the paper does not end with floats trailing

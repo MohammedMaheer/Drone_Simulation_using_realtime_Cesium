@@ -133,7 +133,6 @@ tricopters, hexacopters, octocopters, payload mechanics, ground
 effect, propeller vibration, motor saturation, or battery thermal
 runaway.
 
-\subsection{Related work}\label{sec:related}
 Open-source simulators include jMAVSim and Gazebo/RotorS
 \cite{ros2014}, which target the PX4 stack and require ROS, and
 AirSim \cite{airsim2017}, which provides photo-real rendering through
@@ -161,7 +160,6 @@ replay, CesiumJS WebGL globe) and (vii) reproduces every figure in
 this paper from a single \texttt{init\_project; \dots} call. The
 complete source repository is publicly available~\cite{repo}.
 
-\subsection{Contributions}
 The principal contributions are:
 \begin{itemize}
 \item A configurable $N$-motor rigid-body dynamics model with seven
@@ -183,7 +181,7 @@ The principal contributions are:
       scripts~\cite{repo}.
 \end{itemize}
 
-\subsection{Paper organisation}
+This paper is organised as follows.
 Section~\ref{sec:arch} introduces the eight orthogonal modules of the
 framework. Section~\ref{sec:dyn} derives the rigid-body dynamics.
 Section~\ref{sec:prop} describes the propulsion stack.
@@ -781,36 +779,36 @@ for very-low-power embedded targets.
 
 %==============================================================
 \begin{thebibliography}{00}
+\bibitem{rotors2016} M.~Achtelik et~al., ``Multirotor Aerial Vehicles:
+Modeling, Estimation, and Control of Quadrotor,'' \emph{IEEE Robotics
+\& Automation Magazine}, vol.~19, no.~3, 2012.
 \bibitem{ros2014} F.~Furrer, M.~Burri, M.~Achtelik, and R.~Siegwart,
 ``RotorS --- A Modular Gazebo MAV Simulator Framework,'' in
 \emph{Robot Operating System (ROS): The Complete Reference},
 A.~Koubaa, Ed., Springer, 2016, pp.~595--625.
-\bibitem{rotors2016} M.~Achtelik et~al., ``Multirotor Aerial Vehicles:
-Modeling, Estimation, and Control of Quadrotor,'' \emph{IEEE Robotics
-\& Automation Magazine}, vol.~19, no.~3, 2012.
 \bibitem{airsim2017} S.~Shah, D.~Dey, C.~Lovett, and A.~Kapoor,
 ``AirSim: High-Fidelity Visual and Physical Simulation for
 Autonomous Vehicles,'' in \emph{Field and Service Robotics}, 2018.
-\bibitem{dryden} U.S.~Department of Defense,
-\emph{Flying Qualities of Piloted Aircraft}, MIL-STD-1797B, 2006.
-\bibitem{cheeseman} I.~C. Cheeseman and W.~E. Bennett,
-``The Effect of the Ground on a Helicopter Rotor in Forward Flight,''
-ARC R\&M 3021, 1955.
 \bibitem{prouty} R.~W. Prouty, \emph{Helicopter Performance,
 Stability, and Control}, Krieger, 2002.
 \bibitem{leishman} J.~G.~Leishman, \emph{Principles of Helicopter
 Aerodynamics}, 2nd~ed., Cambridge University Press, 2006.
-\bibitem{plett} G.~L.~Plett, \emph{Battery Management Systems
-Volume~II: Equivalent-Circuit Methods}, Artech House, 2015.
+\bibitem{uiuc} M.~S.~Selig, ``UIUC Propeller Database,'' University
+of Illinois at Urbana-Champaign. [Online]. Available:
+\url{https://m-selig.ae.illinois.edu/props/propDB.html}
+\bibitem{cheeseman} I.~C. Cheeseman and W.~E. Bennett,
+``The Effect of the Ground on a Helicopter Rotor in Forward Flight,''
+ARC R\&M 3021, 1955.
+\bibitem{dryden} U.S.~Department of Defense,
+\emph{Flying Qualities of Piloted Aircraft}, MIL-STD-1797B, 2006.
 \bibitem{groves} P.~D.~Groves, \emph{Principles of GNSS, Inertial,
 and Multisensor Integrated Navigation Systems}, 2nd~ed., Artech
 House, 2013.
 \bibitem{cesium} CesiumJS, ``CesiumJS --- The platform for 3D
 geospatial,'' [Online]. Available:
 \url{https://cesium.com/platform/cesiumjs/}
-\bibitem{uiuc} M.~S.~Selig, ``UIUC Propeller Database,'' University
-of Illinois at Urbana-Champaign. [Online]. Available:
-\url{https://m-selig.ae.illinois.edu/props/propDB.html}
+\bibitem{plett} G.~L.~Plett, \emph{Battery Management Systems
+Volume~II: Equivalent-Circuit Methods}, Artech House, 2015.
 \bibitem{repo} M.~Maheer, ``Drone Simulation using Realtime Cesium
 --- open-source MATLAB multirotor framework,'' GitHub repository,
 2026. [Online]. Available:

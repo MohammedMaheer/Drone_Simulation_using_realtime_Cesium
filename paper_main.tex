@@ -34,10 +34,11 @@
 \setcounter{bottomnumber}{2}
 \setcounter{totalnumber}{4}
 \setcounter{dbltopnumber}{3}
-% IEEEtran defaults to \raggedbottom for conference papers; keep it
-% so figure-heavy pages do not stretch vertical space and shove
-% floats into awkward positions.
-\raggedbottom
+% Use \flushbottom so the typesetter stretches inter-paragraph and
+% inter-section glue to fill the page exactly to the bottom margin.
+% Without this, IEEEtran conference defaults to \raggedbottom,
+% which leaves visible whitespace at the foot of figure-heavy pages.
+\flushbottom
 % Allow loose word-spacing rather than letting long tokens (file
 % paths, URLs, identifiers with underscores) overshoot the narrow
 % IEEE column. Combined with \path{} this prevents column overlap.
@@ -589,7 +590,6 @@ determines the trade-off between cycle time and corner overshoot.
 Mission completion time is reproducible to within 0.3\,s across
 ten Monte-Carlo seeds.
 
-\pagebreak
 \subsection{Wind rejection}
 Repeating the same mission under a steady 8\,m/s wind plus Dryden
 turbulence triples the cross-track error but the drone still

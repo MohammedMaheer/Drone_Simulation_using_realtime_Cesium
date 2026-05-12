@@ -106,114 +106,95 @@ thermal model, CesiumJS, reproducible research
 
 %==============================================================
 \section{Introduction}
-\IEEEPARstart{U}{nmanned} multirotor aerial vehicles have become
-indispensable across industrial, defence, commercial, and research
-domains~\cite{rotors2016}. As mission requirements grow increasingly
-complex, with diverse airframe topologies, heavier payloads, longer
-endurance and robust disturbance rejection in cluttered or windy
-environments, the reliance on empirical, trial-and-error physical
-prototyping has become prohibitively expensive, slow and risky. A
-high-fidelity, fully scripted simulator that captures the rotor,
-sensor, environment and energy subsystems with sufficient realism
-is therefore now a prerequisite both for early-stage design space
-exploration and for safe controller development.
+\IEEEPARstart{M}{ultirotor} UAVs have moved from a research
+curiosity into everyday use across defence, industrial inspection,
+cinematography, and academia~\cite{rotors2016}. With that has come
+a set of harder demands: stranger airframe topologies, heavier and
+more awkward payloads, longer endurance, and the need to keep
+flying in wind that would have grounded an earlier generation.
+Iterating any of this on real hardware is slow, expensive, and
+occasionally exciting in the wrong way, so a scripted simulator
+that actually models the rotors, the sensors, the air, and the
+battery is no longer a luxury --- it is where most of the design
+work now lives.
 
-The pedagogical and prototyping value of such a
-high-fidelity, fully scripted multirotor simulator is now well
-established. Industry-grade stacks such as PX4 SITL, ArduPilot SITL,
-Gazebo/RotorS, jMAVSim and AirSim provide excellent fidelity but bind
-the user to specific autopilot ecosystems, ROS toolchains, or
-game-engine renderers. This makes it difficult to inspect intermediate
-quantities (rotor torque, battery internal resistance, sensor
-latency), to swap out individual subsystems, or to drive a
-publication-quality figure deterministically from a saved log.
-Conversely, the textbook quadrotor models that dominate undergraduate
-control courses tend to assume a constant thrust coefficient, ideal
-sensors, perfect alignment, and an X-frame quadcopter. Such models
-silently disqualify themselves as a starting point for studying
+The big SITL stacks (PX4 SITL, ArduPilot SITL, Gazebo/RotorS,
+jMAVSim, AirSim) do fidelity well, but they each drag along an
+autopilot ecosystem, a ROS toolchain, or a game-engine renderer.
+That makes it tedious to poke at intermediate quantities --- rotor
+torque, battery internal resistance, the latency on a single GPS
+fix --- or to swap one subsystem for another, or to regenerate a
+figure for a paper from a saved log without re-running the whole
+stack. At the other extreme, the X-quad model that gets handed out
+in most undergraduate control courses bakes in a constant thrust
+coefficient, perfect sensors, and ideal alignment. It is fine for a
+first lecture, but it is not a starting point for studying
 tricopters, hexacopters, octocopters, payload mechanics, ground
-effect, propeller vibration, motor saturation, or battery thermal
-runaway.
+effect, propeller vibration, motor saturation, or thermal runaway.
 
-Open-source simulators include jMAVSim and Gazebo/RotorS
-\cite{ros2014}, which target the PX4 stack and require ROS, and
-AirSim \cite{airsim2017}, which provides photo-real rendering through
-Unreal Engine but binds the user to a C++/Python toolchain. RotorS
-\cite{rotors2016} contributes multirotor models including hex- and
-octo- frames but inherits the Gazebo overhead. None of these expose,
-in a single self-contained script, the combination of (i) an
-arbitrary-$N$ multirotor mixer, (ii) a BEMT propeller with
-measured-curve fallback, (iii) lumped-parameter battery thermal
-dynamics, (iv) Cheeseman--Bennett ground effect, (v) MIL-DTL-9490E
-Dryden turbulence with altitude-scaled intensity, and (vi) a 12-state
-EKF with realistic sensor pathologies. The framework reported here
-closes that gap and remains a single-language, single-process, fully
-scripted artefact.
+The better-known open simulators have similar trade-offs. jMAVSim
+and Gazebo/RotorS~\cite{ros2014} are tied to PX4 and want ROS;
+AirSim~\cite{airsim2017} renders beautifully but pulls in Unreal
+and a C++/Python toolchain; RotorS~\cite{rotors2016} does ship hex
+and octo models but inherits all of Gazebo's machinery. None of
+them expose, inside one self-contained script, the combination we
+needed: arbitrary-$N$ mixing, a BEMT propeller with a measured-
+curve fallback, lumped battery thermal dynamics, Cheeseman--Bennett
+ground effect, MIL-DTL-9490E Dryden turbulence with altitude
+scaling, and a 12-state EKF that actually misbehaves the way real
+sensors do. The framework presented here fills that hole and stays
+in a single language and a single process.
 
-This paper describes a third path: a single-language,
-purely MATLAB framework that (i) supports an arbitrary number of
-motors with seven frame topologies, (ii) models the propulsion stack
-from first principles, (iii) reproduces calibrated aerodynamic
-effects, (iv) implements an MIL-DTL-9490E Dryden turbulence model
-with deterministic gusts and stochastic micro-turbulence, (v) ships
-with a cascaded PID controller and a 12-state EKF, (vi) provides a
-full visualisation suite (interactive 3-D viewer, live dashboard, 3-D
-replay, CesiumJS WebGL globe) and (vii) reproduces every figure in
-this paper from a single \texttt{init\_project; \dots} call. The
-complete source repository is publicly available~\cite{repo}.
+In short, this is a pure-MATLAB framework that (i) handles any
+number of motors over seven frame topologies, (ii) builds the
+propulsion stack from first principles, (iii) layers in calibrated
+aerodynamic corrections, (iv) ships an MIL-DTL-9490E Dryden model
+with both deterministic gusts and stochastic micro-turbulence, (v)
+comes with a cascaded PID and a 12-state EKF, (vi) carries a
+four-way visualisation suite (3-D viewer, live dashboard, animated
+replay, CesiumJS globe), and (vii) regenerates every figure in this
+paper from a single \texttt{init\_project; \dots} call. The repo is
+public~\cite{repo}.
 
-The principal contributions are:
-\begin{itemize}
-\item A configurable $N$-motor rigid-body dynamics model with seven
-      frame topologies (tri, quad-X, quad-+, hex-flat, hex-Y,
-      octo-flat, octo-X) and five factory-tuned presets covering a
-      $\times$200 mass range.
-\item A propulsion stack composed of a BEMT propeller, a non-linear
-      BLDC motor with winding thermal model, and an ESC first-order
-      lag, with all coefficients exposed as configuration fields.
-\item A 12-state EKF fusing IMU, GPS, barometer, and magnetometer
-      signals subject to bias drift, latency, dropout and jitter.
-\item A complete reproduction pipeline: every figure in this paper
-      is regenerated from logged data by a single MATLAB script.
-\item A WebGL CesiumJS bridge that visualises the same simulation
-      state on a real Earth (Google 3-D Tiles), demonstrated in
-      Fig.~\ref{fig:cesium}.
-\item A publicly released open-source repository hosting the full
-      framework source, configuration presets, and reproduction
-      scripts~\cite{repo}.
-\end{itemize}
+What is new here, in one paragraph: an $N$-motor rigid-body model
+with seven topologies (tri, quad-X, quad-+, hex-flat, hex-Y,
+octo-flat, octo-X) and five tuned presets that span a $\times 200$
+mass range; a BEMT$\,+\,$BLDC$\,+\,$ESC stack with every coefficient
+exposed in the config; a 12-state EKF fed by IMU, GPS, barometer and
+magnetometer streams that suffer real-world bias drift, latency,
+dropout and jitter; an end-to-end reproduction script; and a WebGL
+CesiumJS bridge that puts the same simulation onto Google 3-D Tiles
+over any latitude/longitude (Fig.~\ref{fig:cesium}). The full
+artefact is released openly~\cite{repo}.
 
-This paper is organised as follows.
-Section~\ref{sec:arch} introduces the eight orthogonal modules of the
-framework. Section~\ref{sec:dyn} derives the rigid-body dynamics.
-Section~\ref{sec:prop} describes the propulsion stack.
-Section~\ref{sec:env} details the environment model.
-Section~\ref{sec:control} gives the control architecture.
-Section~\ref{sec:sense} describes the sensor models and EKF.
-Section~\ref{sec:vis} introduces the visualisation suite (3-D, live
-dashboard, animated replay, Cesium globe).
-Section~\ref{sec:exp} reports experimental results from a 60\,s
-square mission and stress-tests.
-Section~\ref{sec:conc} concludes.
+The rest of the paper follows the obvious split. Section~\ref{sec:arch}
+lays out the eight modules. Section~\ref{sec:dyn} writes down the
+rigid-body equations. Section~\ref{sec:prop} covers the propulsion
+chain, Section~\ref{sec:env} the wind and air, Section~\ref{sec:control}
+the controller, Section~\ref{sec:sense} the sensors and EKF, and
+Section~\ref{sec:vis} the visualisers. Section~\ref{sec:exp} runs the
+benchmarks; Section~\ref{sec:conc} wraps up.
 
 %==============================================================
 \section{System Architecture}\label{sec:arch}
-The framework is organised into eight orthogonal modules:
-\texttt{params/} (configuration and pre-tuned presets), \texttt{models/}
-(dynamics, propulsion, vibration, mixing), \texttt{control/}
-(cascaded PID stack), \texttt{sensors/} (IMU/GPS/baro/mag and EKF),
-\texttt{environment/} (Dryden wind), \texttt{navigation/}
-(waypoint manager and missions), \texttt{telemetry/} (logger and
-dashboard) and \texttt{visualization/} (3-D plot, animation, Cesium
-bridge). Three loop rates are used: 1\,kHz physics, 250\,Hz
-attitude/rate inner loop, and 50\,Hz position outer loop. They are
-enforced by a single deterministic scheduler implemented in
-\texttt{run\_simulation.m}.
-Fig.~\ref{fig:pipeline} depicts the data flow.
+The codebase splits cleanly into eight folders. \texttt{params/}
+holds the configuration and the shipped presets;
+\texttt{models/} keeps the dynamics, propulsion, vibration and
+mixing logic; \texttt{control/} hosts the cascaded PID;
+\texttt{sensors/} contains the IMU, GPS, baro and mag drivers and
+the EKF; \texttt{environment/} carries the Dryden wind generator;
+\texttt{navigation/} owns the waypoint manager and the mission
+profiles; \texttt{telemetry/} logs everything and runs the live
+dashboard; and \texttt{visualization/} renders the 3-D scene, the
+replay, and the Cesium bridge. Internally the simulator runs at
+three rates --- physics at $1$\,kHz, the attitude/rate inner loop at
+$250$\,Hz, and the position outer loop at $50$\,Hz --- driven by a
+single deterministic scheduler in \texttt{run\_simulation.m}.
+Fig.~\ref{fig:pipeline} shows how data moves between them.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.82\textwidth]{fig18_pipeline_overview.png}
+\includegraphics[width=0.75\textwidth]{fig18_pipeline_overview.png}
 \caption{End-to-end simulation pipeline. Top row: deterministic
 forward path at 1\,kHz physics rate. Middle row: feedback path
 through environment, sensors, and 12-state EKF. Bottom row:
@@ -224,12 +205,12 @@ call.}
 \end{figure*}
 
 \subsection{Configuration}
-Each simulation begins with a \emph{drone configuration}, a
-struct returned by \texttt{drone\_config(name)} that contains rigid-
-body inertia, motor and propeller parameters, battery chemistry, ESC
-parameters, motor layout (positions and spin directions), aerodynamic
-coefficients, and pre-tuned PID gains. Five built-in presets are
-shipped:
+Every run starts from a \emph{drone configuration} struct produced
+by \texttt{drone\_config(name)}. It bundles the rigid-body inertia,
+motor and propeller numbers, battery chemistry, ESC parameters,
+motor layout (positions and spin directions), aerodynamic
+coefficients, and the pre-tuned PID gains. Five presets ship with
+the framework:
 
 \begin{table}[!htb]
 \centering
@@ -249,15 +230,15 @@ Preset & $N$ & Mass [kg] & Arm [m] & Prop [in] & T/W \\
 \end{table}
 
 \noindent
-The 3-D rigid-body geometry produced for each of the five presets is
-shown in Fig.~\ref{fig:dronemodels}. The same low-level renderer
-(\texttt{drone\_3d\_plot.m}) is used by both the live simulator and
+Fig.~\ref{fig:dronemodels} shows the 3-D body that each preset
+draws from its config struct. The same renderer
+(\texttt{drone\_3d\_plot.m}) is reused by the live simulator and by
 the post-flight replay.
 
 \FloatBarrier
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.86\textwidth]{fig15_drone_3d_models.png}
+\includegraphics[width=0.78\textwidth]{fig15_drone_3d_models.png}
 \caption{3-D rigid-body renderings of the five built-in airframe
 presets, drawn from the same configuration structs that drive the
 dynamics. From left to right: \texttt{micro\_tri} (180\,mm),
@@ -446,7 +427,7 @@ precise battery model before launching the simulator.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.52\textwidth]{fig14_launcher_ui.png}
+\includegraphics[width=0.45\textwidth]{fig14_launcher_ui.png}
 \caption{Pre-flight setup UI of the simulator. The user picks a
 preset (or fully custom airframe), a real-world location, the
 flight mode, and environmental options before pressing FLY.}
@@ -537,7 +518,7 @@ over Bengaluru.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.62\textwidth]{fig17_cesium_globe.png}
+\includegraphics[width=0.55\textwidth]{fig17_cesium_globe.png}
 \caption{Live CesiumJS view over Bengaluru ($12.97$\,N,
 $77.59$\,E, $920$\,m AMSL). The HUD overlay is driven by the same
 state vector as the dynamics, pushed at $25$\,Hz from MATLAB through
@@ -567,7 +548,7 @@ wanted from the auto-tuner.
 
 \begin{figure*}[!htb]
 \centering
-\includegraphics[width=0.82\textwidth]{fig1_hover_stability.png}
+\includegraphics[width=0.72\textwidth]{fig1_hover_stability.png}
 \caption{Hover stability for the \texttt{standard\_quad} preset
 (no wind). Position, velocity, attitude, motor RPMs, total power,
 and battery SOC are shown in a single tiled plot.}
@@ -706,17 +687,14 @@ Gaussian and matches what we would predict from the IMU noise floor
 seen through the estimator gain.
 
 \subsection{Reproducibility and limitations}
-Every figure in this paper comes out of one archived \texttt{.mat}
-log through \texttt{generate\_paper\_figures.m}; the random seeds,
-config struct, and mission profile travel with that log. The
-framework is a single MATLAB process, which keeps a few things out
-of scope for now: aerodynamic coupling between closely spaced
-rotors (or between vehicles in a swarm), flexible-airframe modes
-that start to matter above $\sim 10$\,kg, and sensor-fusion stacks
-beyond the 12-state EKF. On a stock 8-core laptop the standard
-60\,s mission runs at roughly $0.6\times$ real time; turning off
-the dashboard and the Cesium bridge drops that below $0.25\times$,
-which is what we use for batched Monte-Carlo sweeps.
+Every figure here comes out of one archived \texttt{.mat} log via
+\texttt{generate\_paper\_figures.m}; seeds, config and mission
+profile travel with the log. The framework is single-process MATLAB
+and does not yet model (i) close-rotor or inter-vehicle aerodynamic
+coupling, (ii) flexible-airframe modes above $\sim 10$\,kg, or (iii)
+fusion stacks beyond the 12-state EKF. The 60\,s benchmark runs at
+roughly $0.6\times$ real time on a stock 8-core laptop, dropping
+below $0.25\times$ with the dashboard and Cesium bridge turned off.
 
 % Force all experimental-validation figures to appear before the
 % Conclusion section so the paper does not end with floats trailing
@@ -725,21 +703,17 @@ which is what we use for batched Monte-Carlo sweeps.
 
 %==============================================================
 \section{Conclusion}\label{sec:conc}
-A reproducible, single-language MATLAB simulation framework for
-configurable multirotor aerial vehicles has been presented.
-Distinguishing features include arbitrary motor count, BEMT
-propulsion, MIL-DTL-9490E Dryden turbulence, a 12-state EKF, and a
-CesiumJS WebGL bridge to a real Earth globe. Across a representative
-60\,s waypoint mission the framework delivers sub-15\,cm hover RMS,
-$<$2\,m waypoint deviation in 8\,m/s wind, and battery-energy
-predictions within 4\,\% of nameplate. The full reproduction
-pipeline, including the eighteen figures in this paper, is
-released publicly~\cite{repo}.
-
-Future work will (i) add a moving-base aerodynamic interaction model
-for swarm flight, (ii) extend the Cesium bridge to support real-time
-multi-vehicle replay, and (iii) port the EKF to a square-root form
-for very-low-power embedded targets.
+We have presented a reproducible, single-language MATLAB framework
+for configurable multirotor UAVs. Its distinguishing features --- an
+arbitrary motor count, BEMT propulsion, MIL-DTL-9490E Dryden
+turbulence, a 12-state EKF, and a CesiumJS bridge to a real-Earth
+globe --- come together over a representative 60\,s mission to
+deliver sub-$15$\,cm hover RMS, $<\!2$\,m waypoint deviation under
+$8$\,m/s wind, and battery-energy predictions inside $4$\,\% of
+nameplate. The reproduction pipeline and every figure here are
+released openly~\cite{repo}. Next on the list: a moving-base
+aerodynamic model for swarms, a multi-vehicle Cesium replay, and a
+square-root EKF port for low-power embedded targets.
 
 % Flush every remaining figure before the bibliography so nothing
 % appears after the references.

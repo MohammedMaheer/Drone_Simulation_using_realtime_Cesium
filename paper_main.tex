@@ -235,7 +235,6 @@ draws from its config struct. The same renderer
 (\texttt{drone\_3d\_plot.m}) is reused by the live simulator and by
 the post-flight replay.
 
-\FloatBarrier
 \begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.78\textwidth]{fig15_drone_3d_models.png}
@@ -413,28 +412,33 @@ applied asynchronously when measurements arrive.
 
 %==============================================================
 \section{Visualisation Suite}\label{sec:vis}
-The framework deliberately separates \emph{simulation} from
-\emph{rendering}: the two communicate only through saved telemetry
-logs and a JSON state file. Five complementary visualisations are
-provided.
+Simulation is kept separate from rendering --- they communicate only
+through telemetry logs and a JSON state file. Four visualisers are
+provided: a pre-flight launcher, a live dashboard, an animated 3-D
+replay, and a CesiumJS globe.
 
 \subsection{Pre-flight launcher}
-A dark-themed configuration window lets the user pick a preset, edit
-mass/arm/prop/Kv/capacity, choose a real-world location (with
-latitude/longitude/altitude), pick a flight mode (manual or auto-
-stabilised), and toggle wind, traffic, online map tiles, and the
-precise battery model before launching the simulator.
+A dark configuration window lets the user pick a preset, edit
+mass/arm/prop/Kv/capacity, choose a real-world location, pick a
+flight mode (manual or auto-stabilised), and toggle wind, traffic,
+online map tiles, and the precise battery model before launching
+(Fig.~\ref{fig:launcher}).
 
-\begin{figure*}[!htb]
+\begin{figure}[!htb]
 \centering
-\includegraphics[width=0.45\textwidth]{fig14_launcher_ui.png}
-\caption{Pre-flight setup UI of the simulator. The user picks a
-preset (or fully custom airframe), a real-world location, the
-flight mode, and environmental options before pressing FLY.}
+\includegraphics[width=0.95\columnwidth]{fig14_launcher_ui.png}
+\caption{Pre-flight setup UI: preset (or custom airframe),
+real-world location, flight mode, and environment options before
+pressing FLY.}
 \label{fig:launcher}
-\end{figure*}
+\end{figure}
 
 \subsection{Live telemetry dashboard}
+Fig.~\ref{fig:dash} captures the live MATLAB dashboard at takeoff
+($t=5$\,s), cruise ($t=25$\,s), and completion ($t=59$\,s). It
+refreshes at $50$\,Hz via \texttt{animatedline} and shows attitude,
+ground track, altitude, motor thrust, battery state, and waypoint
+progress side by side.
 
 \begin{figure*}[!htb]
 \centering
@@ -462,14 +466,15 @@ battery state and waypoint progress are visible at a glance.}
 \label{fig:dash}
 \end{figure*}
 
-Three captures of the live MATLAB telemetry dashboard, at takeoff
-($t=5$\,s), mid-mission cruise ($t=25$\,s), and mission completion
-($t=59$\,s), are shown in Fig.~\ref{fig:dash}. The dashboard
-refreshes at 50\,Hz using \texttt{animatedline} and displays attitude,
-ground track, altitude, motor thrust, battery state, and waypoint
-progress.
-
 \subsection{Animated 3-D replay}
+\texttt{animate\_flight.m} reuses the parametric 3-D model from the
+live simulator. Fig.~\ref{fig:anim} is a mid-mission frame with a
+telemetry overlay alongside the 3-D scene; Fig.~\ref{fig:replay}(b)
+is the full waypoint mission as a 3-D ground/air track, and
+Fig.~\ref{fig:replay}(c) is the standard six-panel
+\texttt{plot\_flight\_data} summary (ground track, altitude, speed,
+attitude, motor speeds, battery curve) emitted at the end of every
+run.
 
 \begin{figure*}[!htb]
 \centering
@@ -496,35 +501,22 @@ from a single saved log.}
 \label{fig:replay}
 \end{figure*}
 
-The \texttt{animate\_flight.m} replay re-uses the same parametric
-3-D drone model as the live simulator. Fig.~\ref{fig:anim} shows a
-mid-mission frame with a telemetry overlay rendered alongside the
-3-D scene.
-
-\subsection{3-D mission trajectory and post-flight overview}
-Fig.~\ref{fig:replay}(b) renders the complete waypoint mission as a
-3-D ground/air track. Fig.~\ref{fig:replay}(c) is the standard
-six-panel \texttt{plot\_flight\_data} summary covering ground track,
-altitude, speed, attitude, motor speeds and battery curve. It is
-emitted at the end of every run.
-
 \subsection{CesiumJS geo-referenced globe}
 A Python micro-server (\texttt{cesium\_server.py}) bridges the live
-MATLAB state to a CesiumJS WebGL canvas~\cite{cesium}. The drone is rendered on
-the real Earth (Google 3-D Tiles) at the latitude/longitude/altitude
-chosen in the launcher, with the same attitude quaternion driving
-the 3-D model. Fig.~\ref{fig:cesium} shows the bridge in operation
-over Bengaluru.
+MATLAB state to a CesiumJS WebGL canvas~\cite{cesium}. The drone is
+rendered on Google 3-D Tiles at the chosen latitude/longitude/altitude,
+with the same attitude quaternion driving the model.
+Fig.~\ref{fig:cesium} shows it running over Bengaluru.
 
-\begin{figure*}[!htb]
+\begin{figure}[!htb]
 \centering
-\includegraphics[width=0.55\textwidth]{fig17_cesium_globe.png}
+\includegraphics[width=0.98\columnwidth]{fig17_cesium_globe.png}
 \caption{Live CesiumJS view over Bengaluru ($12.97$\,N,
 $77.59$\,E, $920$\,m AMSL). The HUD overlay is driven by the same
 state vector as the dynamics, pushed at $25$\,Hz from MATLAB through
 a small Python HTTP bridge.}
 \label{fig:cesium}
-\end{figure*}
+\end{figure}
 
 %==============================================================
 \section{Experimental Validation}\label{sec:exp}

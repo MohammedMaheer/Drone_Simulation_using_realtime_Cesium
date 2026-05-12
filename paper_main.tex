@@ -69,36 +69,33 @@ mohdmaahir786@gmail.com}
 
 %==============================================================
 \begin{abstract}
-This paper presents an end-to-end, open-source MATLAB simulation
-framework for unmanned multirotor aerial vehicles that resolves the
-gap between oversimplified textbook quad-only models and large,
-vendor-specific flight-stack simulators (PX4 SITL, Gazebo/RotorS,
-AirSim). The framework supports an arbitrary number of motors
-($N \in \{3,4,6,8\}$ demonstrated; arbitrary $N$ admissible) and
-ships with five factory-tuned presets covering the full design
-envelope from a 180\,mm micro tricopter to a 1\,m octo lifter. A
-6-DOF Newton--Euler rigid-body dynamics model is integrated with an
-explicit RK4 scheme at 1\,kHz, augmented with calibrated aerodynamic
-effects: Cheeseman--Bennett ground effect, blade flapping with
-advance-ratio correction, gyroscopic precession, hub drag, and ISA
-altitude air-density correction. The propulsion stack is composed of
-a blade-element-momentum-theory (BEMT) propeller,
-a non-linear brushless-DC motor with thermal sub-model, and an
-electronic-speed-controller (ESC) lag. The atmospheric environment
-includes an MIL-DTL-9490E Dryden turbulence model with
-altitude-dependent intensity, deterministic gusts, and stochastic
-micro-turbulence. A cascaded triple-loop PID controller (position
-50\,Hz $\rightarrow$ attitude 250\,Hz $\rightarrow$ rate 1\,kHz) is
-paired with a 12-state Extended Kalman Filter that fuses IMU, GPS,
-barometer, and magnetometer signals subject to bias drift, latency,
-dropout, and jitter. Visualisation comprises an interactive 3-D
-simulator, a real-time telemetry dashboard, an animated 3-D replay,
-and a CesiumJS geo-referenced globe view. Across approximately 60
-documented Monte-Carlo runs the framework achieves sub-15\,cm hover
-RMS, $<$2\,m waypoint deviation in 8\,m/s wind, and battery-energy
-predictions within 4\% of nameplate. The framework is
-single-language, fully scripted, and reproduces every figure in this
-paper from the released log set.
+This paper introduces an open MATLAB simulation framework for
+unmanned multirotor aerial vehicles that sits between two awkward
+extremes: the textbook quad-only model on one side and the heavy,
+vendor-locked flight stacks (PX4 SITL, Gazebo/RotorS, AirSim) on the
+other. Motor count is left as a parameter ($N \in \{3,4,6,8\}$ is
+demonstrated here, but the mixer is written for any $N$), and five
+factory-tuned presets are shipped, ranging from a 180\,mm micro
+tricopter up to a 1\,m octo lifter. The dynamics layer is a 6-DOF
+Newton--Euler rigid body stepped at 1\,kHz with explicit RK4, plus a
+stack of calibrated aerodynamic corrections: Cheeseman--Bennett ground
+effect, blade flapping with advance-ratio scaling, gyroscopic
+precession, hub drag, and ISA air-density variation with altitude.
+Propulsion is a BEMT propeller in series with a non-linear brushless-DC
+motor (with a winding thermal sub-model) and an ESC lag. The
+atmosphere model is MIL-DTL-9490E Dryden turbulence with
+altitude-dependent intensity, plus deterministic gusts and a small
+stochastic micro-turbulence overlay. Control is cascaded PID at
+three rates (position $50$\,Hz, attitude $250$\,Hz, rate $1$\,kHz),
+working against a 12-state EKF that fuses IMU, GPS, barometer, and
+magnetometer subject to bias drift, latency, dropout, and jitter.
+Visualisation ships in four flavours: an interactive 3-D viewer, a
+live telemetry dashboard, an animated replay, and a CesiumJS globe
+view. Across roughly sixty Monte-Carlo runs we see sub-$15$\,cm
+hover RMS, $<\!2$\,m waypoint deviation under $8$\,m/s wind, and
+battery-energy predictions within $4$\,\% of nameplate. The whole
+framework is one language, one process, fully scripted, and it
+regenerates every figure in this paper from the released log set.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -541,10 +538,10 @@ over Bengaluru.
 \begin{figure*}[!htb]
 \centering
 \includegraphics[width=0.62\textwidth]{fig17_cesium_globe.png}
-\caption{Live CesiumJS view of the simulator over Bengaluru
-(12.97\,N, 77.59\,E, 920\,m AMSL). The HUD overlay shows the same
-state vector that drives the dynamics, transmitted at 25\,Hz from
-MATLAB through a Python HTTP bridge.}
+\caption{Live CesiumJS view over Bengaluru ($12.97$\,N,
+$77.59$\,E, $920$\,m AMSL). The HUD overlay is driven by the same
+state vector as the dynamics, pushed at $25$\,Hz from MATLAB through
+a small Python HTTP bridge.}
 \label{fig:cesium}
 \end{figure*}
 
@@ -555,17 +552,18 @@ All results are reproduced by the released script
 \path{flight_logs/2026-04-13_15-44-54_quad_x_4M.mat}.
 
 \subsection{Hover stability}
-With the \texttt{standard\_quad} preset and zero wind, the
-controller holds the drone within $\pm$8\,cm horizontal and
-$\pm$4\,cm vertical of the set-point. Fig.~\ref{fig:hover}
-summarises the six-panel diagnostic. Position trace is a bounded
-random walk dominated by GPS innovation noise; body angular rates
-remain below 5\,$^\circ$/s, and the four-motor RPM band stays within
-$\pm$3\,\% spread. Battery SOC falls almost linearly and total power
-tracks the analytic hover estimate to within 1.5\,\%. Repeating with
-\texttt{mini\_quad} and \texttt{heavy\_hex} presets yields the same
-qualitative shape scaled by mass and disc loading, confirming the
-auto-tuner produces consistent gains across the airframe envelope.
+In still air with the \texttt{standard\_quad} preset, the drone
+hovers inside an $8$\,cm horizontal box and a $4$\,cm vertical band
+around the set-point. The six-panel diagnostic in
+Fig.~\ref{fig:hover} tells most of the story: position wanders as a
+bounded random walk whose variance traces back to GPS innovation
+noise, body rates never break $5\,^\circ$/s, and the four motor RPMs
+stay clustered inside a $\pm 3$\,\% band. Battery SOC drops at a
+near-constant rate, and the measured electrical power sits within
+$1.5$\,\% of the textbook hover estimate. We repeated the run on
+\texttt{mini\_quad} and \texttt{heavy\_hex}; the curves look the
+same after rescaling by mass and disc loading, which is what we
+wanted from the auto-tuner.
 
 \begin{figure*}[!htb]
 \centering
@@ -577,34 +575,32 @@ and battery SOC are shown in a single tiled plot.}
 \end{figure*}
 
 \subsection{Waypoint mission}
-A 20\,m square mission is executed in 60\,s with no wind.
-Fig.~\ref{fig:waypoint} shows the ground track and altitude profile.
-Corner overshoot is bounded below 1.2\,m thanks to the
-feed-forward velocity term in the position loop, and the altitude
-channel stays within $\pm$15\,cm of the cruise set-point even
-through the four heading reversals. The waypoint manager switches
-legs on a configurable acceptance radius (default 1.0\,m), which
-determines the trade-off between cycle time and corner overshoot.
-Mission completion time is reproducible to within 0.3\,s across
-ten Monte-Carlo seeds.
+A 20\,m square pattern is flown in 60\,s with the wind switched off.
+Fig.~\ref{fig:waypoint} plots the ground track and altitude.
+Corners overshoot by at most $1.2$\,m, which we attribute to the
+feed-forward velocity term inside the position loop; the altitude
+channel sits inside $\pm 15$\,cm of cruise across all four heading
+reversals. Waypoint switching uses a configurable acceptance radius
+(we leave it at $1.0$\,m by default) and that radius is the main
+knob trading cycle time against corner cut. Across ten Monte-Carlo
+seeds the total mission time is repeatable to roughly $0.3$\,s.
 
 \subsection{Wind rejection}
-Repeating the same mission under a steady 8\,m/s wind plus Dryden
-turbulence triples the cross-track error but the drone still
-completes the pattern (Fig.~\ref{fig:wind}). The mean radial
-deviation rises from 0.6\,m to 1.9\,m, with peak excursions of
-2.4\,m on the upwind legs. Altitude regulation degrades more
-gracefully: the barometer-aided EKF holds the cruise height within
-$\pm$0.4\,m even at the worst-case turbulence intensity. The Dryden
-filter contributes a broadband component centred near 3\,Hz visible
-as attitude ripple, while the deterministic gust overlay produces
-the characteristic low-frequency body-axis sway. Mission completion
-time grows by roughly 4\,\% and no motor saturates the configured
-thrust ceiling. Re-running on \texttt{mini\_quad} and
-\texttt{heavy\_hex} airframes yields 1.6$\times$ and 0.7$\times$ the
-radial deviation respectively, illustrating how the arbitrary-$N$
-mixer transparently scales the disturbance-rejection budget across
-the airframe envelope.
+We re-ran the same square under a constant $8$\,m/s wind layered on
+top of Dryden turbulence. Cross-track error roughly triples but the
+vehicle still walks through every waypoint (Fig.~\ref{fig:wind}).
+The mean radial deviation climbs from $0.6$\,m to $1.9$\,m, peaking
+near $2.4$\,m when the leg is into the wind. Altitude is much
+better behaved: the barometer-aided EKF pins cruise height to
+$\pm 0.4$\,m even at the nastier turbulence intensities we tried.
+The Dryden filter leaves a faint $\sim 3$\,Hz ripple on the attitude
+trace; the sinusoidal gust adds the slower body-axis sway you would
+expect. Mission time is only $\sim 4$\,\% longer, no motor ever
+hits its thrust ceiling. Switching the airframe to \texttt{mini\_quad}
+or \texttt{heavy\_hex} scales the radial deviation by $1.6\times$ and
+$0.7\times$ respectively, which is a clean way to see the
+arbitrary-$N$ mixer redistributing the disturbance-rejection budget
+across airframes.
 
 \begin{figure*}[!htb]
 \centering
@@ -625,21 +621,21 @@ the airframe envelope.
 \end{figure*}
 
 \subsection{EKF residuals}
-Fig.~\ref{fig:ekf} reports the position-measurement minus EKF-prior
-residuals. Mean residual is bias-free to within 5\,cm and the
-covariance trace converges within 6\,s.
+The position-measurement minus EKF-prior residuals are plotted in
+Fig.~\ref{fig:ekf}. Their mean is bias-free to within $5$\,cm and
+the covariance trace settles inside $6$\,s of cold-start.
 
 \subsection{Battery and thermal model}
-Fig.~\ref{fig:state}(b) plots state-of-charge and total power, computed
-from the lumped equivalent-circuit battery model~\cite{plett}. Average
-hover power matches the analytical estimate (216\,W at 1.5\,kg) within
-1.5\,\%. The model resolves $V_{oc}(\mathrm{SOC})$ as a piecewise
-polynomial, the ohmic drop $R_0 i$, and a single RC pair
-$(R_1, C_1)$ for the relaxation transient. Coulomb counting is
-corrected by a slow voltage-feedback term to bound long-horizon
-drift. Winding temperature feeds back into $R_m(T_m)$ inside the BLDC
-model so that sustained high-throttle commands appear as a
-measurable reduction in mechanical efficiency.
+Fig.~\ref{fig:state}(b) plots SOC and total power from the lumped
+equivalent-circuit cell model~\cite{plett}. Average hover power lands
+within $1.5$\,\% of the $216$\,W analytic figure at $1.5$\,kg.
+Inside the model, $V_{oc}(\mathrm{SOC})$ is a piecewise polynomial,
+the ohmic drop is $R_0 i$, and a single $(R_1, C_1)$ pair carries
+the short-term relaxation transient. Long-horizon drift in the
+Coulomb counter is pulled back by a slow voltage-feedback term. The
+winding-temperature loop closes back into $R_m(T_m)$ inside the BLDC
+stage, so a long burn at high throttle shows up as slightly worse
+mechanical efficiency instead of silent over-power.
 
 \begin{figure*}[!htb]
 \centering
@@ -686,40 +682,41 @@ saturation, attitude RMS below 1$^\circ$ on all three axes.}
 \end{figure*}
 
 \subsection{Payload release}
-Fig.~\ref{fig:state}(c) captures the discrete-event payload-release
-disturbance: an instantaneous 0.5\,kg drop at $t=30$\,s causes a
-$\Delta\theta \!\approx\! 5^\circ$ pitch transient that the
-attitude loop rejects in $\sim$0.4\,s. The mass-moment-of-inertia
-tensor is updated in the same time step, so subsequent rotational
-dynamics use the lighter, lower-inertia airframe without any manual
-intervention. The thrust-to-weight ratio rises from 4.4 to 6.6 in
-the instant after release, which the position outer loop sees as a
-momentary altitude overshoot of $\sim$0.3\,m before the integrator
-resettles. This event is intentionally retained as a benchmark for
-controllers that must adapt to abrupt mass changes during delivery,
-tethered tasks, or release of a tow-line.
+In Fig.~\ref{fig:state}(c) a $0.5$\,kg payload is released as a
+discrete event at $t = 30$\,s. The pitch axis kicks by roughly
+$5^\circ$ and the attitude loop drags it back in about $0.4$\,s. The
+inertia tensor is rewritten in the same step, so from the next
+integration tick the rotational dynamics already see the lighter
+frame. The thrust-to-weight ratio jumps from $4.4$ to $6.6$ at the
+instant of release; the outer loop reads this as a $\sim 0.3$\,m
+altitude bubble before the integrator pulls it down. We keep this
+event in the repository as a small benchmark for any controller
+that needs to cope with abrupt mass changes (delivery drops,
+tethered cuts, tow-line release).
 
 \subsection{Motor speeds and attitude tracking}
-Fig.~\ref{fig:inner} verifies the inner loops. Motor RPMs are smooth
-(no commutation chatter from the ESC lag), and the attitude reference
-is tracked with $<$1$^\circ$ RMS. The four motor traces split cleanly
-into pairs during yaw transients, confirming correct distribution of
-the yaw moment. Peak commanded slew stays below
-$\dot\omega_{\max}=2500$\,rad/s$^2$, bounding peak phase current. In
-still air the residual tracking error is essentially Gaussian and
-consistent with the IMU noise floor mapped through the estimator gain.
+Fig.~\ref{fig:inner} is the inner-loop sanity check. Motor RPM
+traces are clean (the ESC lag eats any commutation chatter) and
+attitude is held to under $1^\circ$ RMS. During yaw transients the
+four traces split into the expected pairs, which says the mixer is
+routing the yaw moment the way it should. Commanded slew rate never
+exceeds $\dot\omega_{\max} = 2500$\,rad/s$^2$, so peak phase current
+stays bounded. In still air the tracking error is essentially
+Gaussian and matches what we would predict from the IMU noise floor
+seen through the estimator gain.
 
 \subsection{Reproducibility and limitations}
-All figures are regenerated by \texttt{generate\_paper\_figures.m}
-from a single archived \texttt{.mat} log; random seeds, configuration
-struct, and mission profile are persisted alongside the log. The
-framework is single-process MATLAB and does not yet cover (i)
-aerodynamic interaction between closely spaced rotors or swarms,
-(ii) flexible-airframe modes for lifters above $\sim$10\,kg, and
-(iii) sensor-fusion architectures beyond the 12-state EKF. End-to-
-end runtime is approximately 0.6$\times$ wall clock on a stock
-8-core laptop; disabling the dashboard and Cesium bridge brings
-real-time-factor below 0.25$\times$ for batched Monte-Carlo sweeps.
+Every figure in this paper comes out of one archived \texttt{.mat}
+log through \texttt{generate\_paper\_figures.m}; the random seeds,
+config struct, and mission profile travel with that log. The
+framework is a single MATLAB process, which keeps a few things out
+of scope for now: aerodynamic coupling between closely spaced
+rotors (or between vehicles in a swarm), flexible-airframe modes
+that start to matter above $\sim 10$\,kg, and sensor-fusion stacks
+beyond the 12-state EKF. On a stock 8-core laptop the standard
+60\,s mission runs at roughly $0.6\times$ real time; turning off
+the dashboard and the Cesium bridge drops that below $0.25\times$,
+which is what we use for batched Monte-Carlo sweeps.
 
 % Force all experimental-validation figures to appear before the
 % Conclusion section so the paper does not end with floats trailing
